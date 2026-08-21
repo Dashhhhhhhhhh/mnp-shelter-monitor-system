@@ -21,7 +21,7 @@ CREATE TABLE notification_recipients (
         UNIQUE (notification_id, user_id),
 
     CONSTRAINT chk_notification_read_status
-        CHECK (s
+        CHECK (
             (is_read = FALSE AND read_at IS NULL)
             OR
             (is_read = TRUE AND read_at IS NOT NULL)
