@@ -1,4 +1,4 @@
-import { createAnimal, getAnimals } from "./animal.service.js";
+import { createAnimal, getAnimals, getAnimalById } from "./animal.service.js";
 
 async function createAnimalController(req, res, next) {
   try {
@@ -27,4 +27,21 @@ async function getAnimalsController(req, res, next) {
   }
 }
 
-export { createAnimalController, getAnimalsController };
+async function getAnimalByIdController(req, res, next) {
+  try {
+    const animal = await getAnimalById(req.params.animalId);
+
+    return res.status(200).json({
+      success: true,
+      animal,
+    });
+  } catch (error) {
+    next(error);
+  }
+}
+
+export {
+  createAnimalController,
+  getAnimalsController,
+  getAnimalByIdController,
+};

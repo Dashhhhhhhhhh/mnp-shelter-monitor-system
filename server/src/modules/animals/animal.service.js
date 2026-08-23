@@ -2,10 +2,13 @@ import {
   getNextAnimalCodeNumber,
   insertAnimal,
   findAnimals,
+  findAnimalById,
 } from "./animal.repository.js";
+
 import {
   validateCreateAnimalInput,
   validateAnimalListQuery,
+  validateAnimalId,
 } from "./animal.validation.js";
 
 async function generateAnimalCode(species) {
@@ -105,4 +108,35 @@ async function getAnimals(query) {
   };
 }
 
-export { createAnimal, getAnimals };
+async function getAnimalById(animalId) {
+  const validAnimalId = validateAnimalId(animalId);
+
+  const animal = await findAnimalById(validAnimalId);
+
+  if (!animal) {
+    const error = new Error("Animal not found");
+    error.statusCode = 404;
+    throw error;
+  }
+
+  return {
+    animalId: animal.animal_id,
+    animalCode: animal.animal_code,
+    animalName: animal.animal_name,
+    species: animal.species,
+    breed: animal.breed,
+    lifeStage: animal.life_stage,
+    sex: animal.sex,
+    collarColor: animal.collar_color,
+    birthDate: animal.birth_date,
+    birthDateIsEstimated: animal.birth_date_is_estimated,
+    status: animal.status,
+    healthStatus: animal.health_status,
+    adoptionStatus: animal.adoption_status,
+    createdBy: animal.created_by,
+    updatedBy: animal.updated_by,
+    createdAt: animal.created_at,
+    updatedAt: animal.updated_at,
+  };
+}
+export { createAnimal, getAnimals, getAnimalById };

@@ -261,9 +261,38 @@ async function findAnimals({
   };
 }
 
+async function findAnimalById(animalId) {
+  const result = await pool.query(
+    `SELECT
+      a.animal_id,
+      a.animal_code,
+      a.animal_name,
+      a.species,
+      a.breed,
+      a.life_stage,
+      a.sex,
+      a.collar_color,
+      a.birth_date,
+      a.birth_date_is_estimated,
+      a.status,
+      a.health_status,
+      a.adoption_status,
+      a.created_by,
+      a.updated_by,
+      a.created_at,
+      a.updated_at
+    FROM animals a
+    WHERE a.animal_id = $1`,
+    [animalId],
+  );
+
+  return result.rows[0];
+}
+
 export {
   getNextAnimalCodeNumber,
   insertAnimal,
   validateAnimalListQuery,
   findAnimals,
+  findAnimalById,
 };
