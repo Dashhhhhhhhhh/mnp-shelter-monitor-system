@@ -5,6 +5,7 @@ import {
   getAnimalsController,
   getAnimalByIdController,
   updateAnimalController,
+  archiveAnimalController,
 } from "./animal.controller.js";
 import { authenticate } from "../../middlewares/authenticate.js";
 import { authorizeRoles } from "../../middlewares/authorizeRoles.js";
@@ -38,4 +39,12 @@ router.patch(
   authorizeRoles("ADMIN", "VOLUNTEER"),
   updateAnimalController,
 );
+
+router.patch(
+  "/:animalId/archive",
+  authenticate,
+  authorizeRoles("ADMIN"),
+  archiveAnimalController,
+);
+
 export default router;

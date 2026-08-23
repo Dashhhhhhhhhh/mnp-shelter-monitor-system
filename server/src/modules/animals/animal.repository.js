@@ -146,7 +146,7 @@ async function findAnimals({
   page,
   limit,
 }) {
-  const conditions = [];
+  const conditions = ["a.is_archived = FALSE"];
   const values = [];
 
   if (species) {
@@ -282,18 +282,15 @@ async function findAnimalById(animalId) {
       a.created_at,
       a.updated_at
     FROM animals a
-    WHERE a.animal_id = $1`,
+    WHERE a.animal_id = $1
+    AND a.is_archived = FALSE`,
     [animalId],
   );
 
   return result.rows[0];
 }
 
-async function updateAnimalRecord(
-  animalId,
-  updates,
-  updatedBy,
-) {
+async function updateAnimalRecord(animalId, updates, updatedBy) {
   const columnMap = {
     animalName: "animal_name",
     breed: "breed",
@@ -315,9 +312,7 @@ async function updateAnimalRecord(
 
     values.push(value);
 
-    setClauses.push(
-      `${column} = $${values.length}`,
-    );
+    setClauses.push(`${column} = $${values.length}`);
   }
 
   values.push(updatedBy);
@@ -357,11 +352,35 @@ async function updateAnimalRecord(
   return result.rows[0];
 }
 
+async function archiveAnimalRecord(animalId, archivedBy) {
+  const result = await pool.query(
+    `UPDATE animals
+     SET
+       is_archived = TRUE,
+       archived_at = NOW(),
+       archived_by = $2,
+       updated_by = $2,
+       updated_at = NOW()
+     WHERE animal_id = $1
+       AND is_archived = FALSE
+     RETURNING
+       animal_id,
+       animal_code,
+       animal_name,
+       is_archived,
+       archived_at,
+       archived_by`,
+    [animalId, archivedBy],
+  );
+
+  return result.rows[0];
+}
 export {
   getNextAnimalCodeNumber,
   insertAnimal,
   validateAnimalListQuery,
   findAnimals,
   findAnimalById,
-  updateAnimalRecord
+  updateAnimalRecord,
+  archiveAnimalRecord,  
 };

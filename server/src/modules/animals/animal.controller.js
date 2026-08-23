@@ -3,6 +3,7 @@ import {
   getAnimals,
   getAnimalById,
   updateAnimal,
+  archiveAnimal,
 } from "./animal.service.js";
 
 async function createAnimalController(req, res, next) {
@@ -62,9 +63,23 @@ async function updateAnimalController(req, res, next) {
   }
 }
 
+async function archiveAnimalController(req, res, next) {
+  try {
+    const animal = await archiveAnimal(req.params.animalId, req.user.userId);
+
+    return res.status(200).json({
+      success: true,
+      animal,
+    });
+  } catch (error) {
+    next(error);
+  }
+}
+
 export {
   createAnimalController,
   getAnimalsController,
   getAnimalByIdController,
   updateAnimalController,
+  archiveAnimalController,
 };

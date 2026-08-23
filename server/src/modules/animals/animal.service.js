@@ -4,6 +4,7 @@ import {
   findAnimals,
   findAnimalById,
   updateAnimalRecord,
+  archiveAnimalRecord,
 } from "./animal.repository.js";
 
 import {
@@ -216,4 +217,25 @@ async function updateAnimal(animalId, animalData, updatedBy) {
     updatedAt: updatedAnimal.updated_at,
   };
 }
-export { createAnimal, getAnimals, getAnimalById, updateAnimal };
+
+async function archiveAnimal(animalId, archivedBy) {
+  const validAnimalId = validateAnimalId(animalId);
+
+  const archivedAnimal = await archiveAnimalRecord(validAnimalId, archivedBy);
+
+  if (!archivedAnimal) {
+    const error = new Error("Animal not found");
+    error.statusCode = 404;
+    throw error;
+  }
+
+  return {
+    animalId: archivedAnimal.animal_id,
+    animalCode: archivedAnimal.animal_code,
+    animalName: archivedAnimal.animal_name,
+    isArchived: archivedAnimal.is_archived,
+    archivedAt: archivedAnimal.archived_at,
+    archivedBy: archivedAnimal.archived_by,
+  };
+}
+export { createAnimal, getAnimals, getAnimalById, updateAnimal, archiveAnimal };
