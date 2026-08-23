@@ -4,6 +4,7 @@ import cookieParser from "cookie-parser";
 
 import { errorHandler } from "./middlewares/errorHandler.js";
 import userRoutes from "./modules/users/user.routes.js";
+import animalRoutes from "./modules/animals/animal.routes.js";
 
 const app = express();
 
@@ -12,6 +13,7 @@ app.use(cookieParser());
 
 app.use("/api/auth", authRoutes);
 app.use("/api/users", userRoutes);
+app.use("/api/animals", animalRoutes);
 
 app.get("/", (req, res) => {
   res.json({ message: "M & P Shelter Monitoring API is running!" });

@@ -1,0 +1,11 @@
+BEGIN;
+
+CREATE SEQUENCE animal_cat_code_seq
+START WITH 1
+INCREMENT BY 1;
+
+CREATE SEQUENCE animal_dog_code_seq
+START WITH 1
+INCREMENT BY 1;
+
+COMMIT;

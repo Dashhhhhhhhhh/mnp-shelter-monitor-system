@@ -1,9 +1,9 @@
 import express from "express";
+const router = express.Router();
+
 import { createUserController } from "./user.controller.js";
 import { authenticate } from "../../middlewares/authenticate.js";
 import { authorizeRoles } from "../../middlewares/authorizeRoles.js";
-
-const router = express.Router();
 
 router.post("/", authenticate, authorizeRoles("ADMIN"), createUserController);
 
