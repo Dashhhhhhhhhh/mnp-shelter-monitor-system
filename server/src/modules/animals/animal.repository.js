@@ -289,10 +289,79 @@ async function findAnimalById(animalId) {
   return result.rows[0];
 }
 
+async function updateAnimalRecord(
+  animalId,
+  updates,
+  updatedBy,
+) {
+  const columnMap = {
+    animalName: "animal_name",
+    breed: "breed",
+    lifeStage: "life_stage",
+    sex: "sex",
+    collarColor: "collar_color",
+    birthDate: "birth_date",
+    birthDateIsEstimated: "birth_date_is_estimated",
+    healthStatus: "health_status",
+  };
+
+  const setClauses = [];
+  const values = [];
+
+  for (const [field, value] of Object.entries(updates)) {
+    const column = columnMap[field];
+
+    if (!column) continue;
+
+    values.push(value);
+
+    setClauses.push(
+      `${column} = $${values.length}`,
+    );
+  }
+
+  values.push(updatedBy);
+  const updatedByPosition = values.length;
+
+  values.push(animalId);
+  const animalIdPosition = values.length;
+
+  const result = await pool.query(
+    `UPDATE animals
+     SET
+       ${setClauses.join(", ")},
+       updated_by = $${updatedByPosition},
+       updated_at = NOW()
+     WHERE animal_id = $${animalIdPosition}
+     RETURNING
+       animal_id,
+       animal_code,
+       animal_name,
+       species,
+       breed,
+       life_stage,
+       sex,
+       collar_color,
+       birth_date,
+       birth_date_is_estimated,
+       status,
+       health_status,
+       adoption_status,
+       created_by,
+       updated_by,
+       created_at,
+       updated_at`,
+    values,
+  );
+
+  return result.rows[0];
+}
+
 export {
   getNextAnimalCodeNumber,
   insertAnimal,
   validateAnimalListQuery,
   findAnimals,
   findAnimalById,
+  updateAnimalRecord
 };

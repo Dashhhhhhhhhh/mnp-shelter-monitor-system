@@ -369,4 +369,212 @@ function validateAnimalId(animalId) {
 
   return animalId;
 }
-export { validateCreateAnimalInput, validateAnimalListQuery, validateAnimalId };
+
+function validateUpdateAnimalInput(animalData) {
+  const updates = {};
+
+  const hasField = (field) =>
+    Object.prototype.hasOwnProperty.call(animalData, field);
+
+  // Animal name
+  if (hasField("animalName")) {
+    if (
+      animalData.animalName !== null &&
+      typeof animalData.animalName !== "string"
+    ) {
+      const error = new Error("Animal name must be a string or null");
+      error.statusCode = 400;
+      throw error;
+    }
+
+    updates.animalName =
+      animalData.animalName === null
+        ? null
+        : animalData.animalName.trim() || null;
+
+    if (updates.animalName && updates.animalName.length > 50) {
+      const error = new Error("Animal name must not exceed 50 characters");
+      error.statusCode = 400;
+      throw error;
+    }
+  }
+
+  // Breed
+  if (hasField("breed")) {
+    if (animalData.breed !== null && typeof animalData.breed !== "string") {
+      const error = new Error("Breed must be a string or null");
+      error.statusCode = 400;
+      throw error;
+    }
+
+    updates.breed =
+      animalData.breed === null ? null : animalData.breed.trim() || null;
+
+    if (updates.breed && updates.breed.length > 100) {
+      const error = new Error("Breed must not exceed 100 characters");
+      error.statusCode = 400;
+      throw error;
+    }
+  }
+
+  // Life stage
+  if (hasField("lifeStage")) {
+    if (typeof animalData.lifeStage !== "string") {
+      const error = new Error("Life stage must be a string");
+      error.statusCode = 400;
+      throw error;
+    }
+
+    const lifeStage = animalData.lifeStage.trim().toUpperCase();
+
+    const allowedLifeStages = ["KITTEN", "PUPPY", "ADULT", "OTHER"];
+
+    if (!allowedLifeStages.includes(lifeStage)) {
+      const error = new Error("Invalid life stage");
+      error.statusCode = 400;
+      throw error;
+    }
+
+    updates.lifeStage = lifeStage;
+  }
+
+  // Sex
+  if (hasField("sex")) {
+    if (typeof animalData.sex !== "string") {
+      const error = new Error("Sex must be a string");
+      error.statusCode = 400;
+      throw error;
+    }
+
+    const sex = animalData.sex.trim().toUpperCase();
+
+    if (!["MALE", "FEMALE"].includes(sex)) {
+      const error = new Error("Sex must be MALE or FEMALE");
+      error.statusCode = 400;
+      throw error;
+    }
+
+    updates.sex = sex;
+  }
+
+  // Collar color
+  if (hasField("collarColor")) {
+    if (
+      animalData.collarColor !== null &&
+      typeof animalData.collarColor !== "string"
+    ) {
+      const error = new Error("Collar color must be a string or null");
+      error.statusCode = 400;
+      throw error;
+    }
+
+    updates.collarColor =
+      animalData.collarColor === null
+        ? null
+        : animalData.collarColor.trim() || null;
+
+    if (updates.collarColor && updates.collarColor.length > 20) {
+      const error = new Error("Collar color must not exceed 20 characters");
+      error.statusCode = 400;
+      throw error;
+    }
+  }
+
+  // Birth date
+  if (hasField("birthDate")) {
+    if (animalData.birthDate === null) {
+      updates.birthDate = null;
+    } else {
+      if (typeof animalData.birthDate !== "string") {
+        const error = new Error(
+          "Birth date must be in YYYY-MM-DD format or null",
+        );
+        error.statusCode = 400;
+        throw error;
+      }
+
+      const birthDate = animalData.birthDate.trim();
+
+      const birthDatePattern = /^\d{4}-\d{2}-\d{2}$/;
+
+      if (!birthDatePattern.test(birthDate)) {
+        const error = new Error("Birth date must be in YYYY-MM-DD format");
+        error.statusCode = 400;
+        throw error;
+      }
+
+      const parsedDate = new Date(`${birthDate}T00:00:00Z`);
+
+      if (
+        Number.isNaN(parsedDate.getTime()) ||
+        parsedDate.toISOString().slice(0, 10) !== birthDate
+      ) {
+        const error = new Error("Birth date is invalid");
+        error.statusCode = 400;
+        throw error;
+      }
+
+      const today = new Date().toISOString().slice(0, 10);
+
+      if (birthDate > today) {
+        const error = new Error("Birth date cannot be in the future");
+        error.statusCode = 400;
+        throw error;
+      }
+
+      updates.birthDate = birthDate;
+    }
+  }
+
+  // Birth date estimated
+  if (hasField("birthDateIsEstimated")) {
+    if (typeof animalData.birthDateIsEstimated !== "boolean") {
+      const error = new Error("Birth date estimated value must be boolean");
+      error.statusCode = 400;
+      throw error;
+    }
+
+    updates.birthDateIsEstimated = animalData.birthDateIsEstimated;
+  }
+
+  // Health status
+  if (hasField("healthStatus")) {
+    if (typeof animalData.healthStatus !== "string") {
+      const error = new Error("Health status must be a string");
+      error.statusCode = 400;
+      throw error;
+    }
+
+    const healthStatus = animalData.healthStatus.trim().toUpperCase();
+
+    const allowedHealthStatuses = [
+      "HEALTHY",
+      "SICK",
+      "INJURED",
+      "UNDER_OBSERVATION",
+      "UNKNOWN",
+    ];
+
+    if (!allowedHealthStatuses.includes(healthStatus)) {
+      const error = new Error("Invalid health status");
+      error.statusCode = 400;
+      throw error;
+    }
+
+    updates.healthStatus = healthStatus;
+  }
+
+  if (Object.keys(updates).length === 0) {
+    const error = new Error("At least one editable animal field is required");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  return updates;
+}
+export {
+  validateCreateAnimalInput,
+  validateAnimalListQuery,
+  validateAnimalId,
+  validateUpdateAnimalInput,
+};
