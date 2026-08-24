@@ -382,5 +382,5 @@ export {
   findAnimals,
   findAnimalById,
   updateAnimalRecord,
-  archiveAnimalRecord,  
+  archiveAnimalRecord,
 };

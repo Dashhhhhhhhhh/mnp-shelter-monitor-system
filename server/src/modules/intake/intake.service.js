@@ -5,36 +5,36 @@ import { findUserById } from "../users/user.repository.js";
 import {
   validateCreateIntakeInput,
   validateIntakeId,
+  validateUpdateIntakeInput,
 } from "./intake.validation.js";
+
 import {
   insertAnimalIntake,
   findIntakesByAnimalId,
   findIntakeById,
+  updateIntakeRecord,
 } from "./intake.repository.js";
 
-async function createAnimalIntake(animalId, intakeData, createdBy) {
-  const validAnimalId = validateAnimalId(animalId);
-
-  const animal = await findAnimalById(validAnimalId);
-
-  if (!animal) {
-    const error = new Error("Animal not found");
-    error.statusCode = 404;
+async function validateIntakeSourceDetails({
+  intakeSource,
+  rescuedByUserId,
+  outsideRescuerName,
+}) {
+  if (intakeSource === "MNP_VOLUNTEER" && !rescuedByUserId) {
+    const error = new Error(
+      "Rescued by user ID is required for MNP volunteer intake",
+    );
+    error.statusCode = 400;
     throw error;
   }
 
-  const {
-    intakeDate,
-    intakeCategory,
-    intakeSource,
-    foundLocation,
-    ageAtIntake,
-    observedCondition,
-    rescuedByUserId,
-    outsideRescuerName,
-    outsideRescuerContact,
-    notes,
-  } = validateCreateIntakeInput(intakeData);
+  if (intakeSource === "OUTSIDE_PERSON" && !outsideRescuerName) {
+    const error = new Error(
+      "Outside rescuer name is required for outside person intake",
+    );
+    error.statusCode = 400;
+    throw error;
+  }
 
   if (rescuedByUserId) {
     const rescuer = await findUserById(rescuedByUserId);
@@ -62,6 +62,37 @@ async function createAnimalIntake(animalId, intakeData, createdBy) {
       throw error;
     }
   }
+}
+
+async function createAnimalIntake(animalId, intakeData, createdBy) {
+  const validAnimalId = validateAnimalId(animalId);
+
+  const animal = await findAnimalById(validAnimalId);
+
+  if (!animal) {
+    const error = new Error("Animal not found");
+    error.statusCode = 404;
+    throw error;
+  }
+
+  const {
+    intakeDate,
+    intakeCategory,
+    intakeSource,
+    foundLocation,
+    ageAtIntake,
+    observedCondition,
+    rescuedByUserId,
+    outsideRescuerName,
+    outsideRescuerContact,
+    notes,
+  } = validateCreateIntakeInput(intakeData);
+
+  await validateIntakeSourceDetails({
+    intakeSource,
+    rescuedByUserId,
+    outsideRescuerName,
+  });
 
   const createdIntake = await insertAnimalIntake({
     animalId: validAnimalId,
@@ -162,4 +193,76 @@ async function getIntakeById(intakeId) {
   };
 }
 
-export { createAnimalIntake, getAnimalIntakes, getIntakeById };
+async function updateIntake(intakeId, intakeData, updatedBy) {
+  const validIntakeId = validateIntakeId(intakeId);
+
+  const existingIntake = await findIntakeById(validIntakeId);
+
+  if (!existingIntake) {
+    const error = new Error("Intake not found");
+    error.statusCode = 404;
+    throw error;
+  }
+
+  const updates = validateUpdateIntakeInput(intakeData);
+
+  const finalIntakeSource =
+    updates.intakeSource ?? existingIntake.intake_source;
+
+  let finalRescuedByUserId =
+    updates.rescuedByUserId !== undefined
+      ? updates.rescuedByUserId
+      : existingIntake.rescued_by_user_id;
+
+  let finalOutsideRescuerName =
+    updates.outsideRescuerName !== undefined
+      ? updates.outsideRescuerName
+      : existingIntake.outside_rescuer_name;
+
+  if (finalIntakeSource === "OUTSIDE_PERSON") {
+    updates.rescuedByUserId = null;
+    finalRescuedByUserId = null;
+  }
+
+  if (
+    finalIntakeSource === "MNP_VOLUNTEER" ||
+    finalIntakeSource === "FOUND_BY_MNP"
+  ) {
+    updates.outsideRescuerName = null;
+    updates.outsideRescuerContact = null;
+    finalOutsideRescuerName = null;
+  }
+
+  await validateIntakeSourceDetails({
+    intakeSource: finalIntakeSource,
+    rescuedByUserId: finalRescuedByUserId,
+    outsideRescuerName: finalOutsideRescuerName,
+  });
+
+  const updatedIntake = await updateIntakeRecord(
+    validIntakeId,
+    updates,
+    updatedBy,
+  );
+
+  return {
+    intakeId: updatedIntake.intake_id,
+    animalId: updatedIntake.animal_id,
+    intakeDate: updatedIntake.intake_date,
+    intakeCategory: updatedIntake.intake_category,
+    intakeSource: updatedIntake.intake_source,
+    foundLocation: updatedIntake.found_location,
+    ageAtIntake: updatedIntake.age_at_intake,
+    observedCondition: updatedIntake.observed_condition,
+    rescuedByUserId: updatedIntake.rescued_by_user_id,
+    outsideRescuerName: updatedIntake.outside_rescuer_name,
+    outsideRescuerContact: updatedIntake.outside_rescuer_contact,
+    notes: updatedIntake.notes,
+    createdBy: updatedIntake.created_by,
+    updatedBy: updatedIntake.updated_by,
+    createdAt: updatedIntake.created_at,
+    updatedAt: updatedIntake.updated_at,
+  };
+}
+
+export { createAnimalIntake, getAnimalIntakes, getIntakeById, updateIntake };

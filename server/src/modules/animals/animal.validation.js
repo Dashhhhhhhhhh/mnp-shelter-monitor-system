@@ -1,3 +1,5 @@
+import { getCurrentManilaDate } from "../../utils/date.js";
+
 function validateCreateAnimalInput(animalData) {
   if (!animalData.species || !animalData.sex || !animalData.lifeStage) {
     const error = new Error("Species, sex, and life stage are required");
@@ -138,8 +140,7 @@ function validateCreateAnimalInput(animalData) {
       throw error;
     }
 
-    const today = new Date().toISOString().slice(0, 10);
-
+    const today = getCurrentManilaDate();
     if (birthDate > today) {
       const error = new Error("Birth date cannot be in the future");
       error.statusCode = 400;
@@ -514,8 +515,7 @@ function validateUpdateAnimalInput(animalData) {
         throw error;
       }
 
-      const today = new Date().toISOString().slice(0, 10);
-
+      const today = getCurrentManilaDate();
       if (birthDate > today) {
         const error = new Error("Birth date cannot be in the future");
         error.statusCode = 400;

@@ -2,6 +2,7 @@ import {
   createAnimalIntake,
   getAnimalIntakes,
   getIntakeById,
+  updateIntake,
 } from "./intake.service.js";
 
 async function createAnimalIntakeController(req, res, next) {
@@ -46,8 +47,27 @@ async function getIntakeByIdController(req, res, next) {
     next(error);
   }
 }
+
+async function updateIntakeController(req, res, next) {
+  try {
+    const intake = await updateIntake(
+      req.params.intakeId,
+      req.body,
+      req.user.userId,
+    );
+
+    return res.status(200).json({
+      success: true,
+      intake,
+    });
+  } catch (error) {
+    next(error);
+  }
+}
+
 export {
   createAnimalIntakeController,
   getAnimalIntakesController,
   getIntakeByIdController,
+  updateIntakeController,
 };
