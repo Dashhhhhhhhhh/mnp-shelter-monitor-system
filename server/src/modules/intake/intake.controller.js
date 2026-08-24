@@ -1,4 +1,8 @@
-import { createAnimalIntake, getAnimalIntakes } from "./intake.service.js";
+import {
+  createAnimalIntake,
+  getAnimalIntakes,
+  getIntakeById,
+} from "./intake.service.js";
 
 async function createAnimalIntakeController(req, res, next) {
   try {
@@ -19,9 +23,7 @@ async function createAnimalIntakeController(req, res, next) {
 
 async function getAnimalIntakesController(req, res, next) {
   try {
-    const intakes = await getAnimalIntakes(
-      req.params.animalId,
-    );
+    const intakes = await getAnimalIntakes(req.params.animalId);
 
     return res.status(200).json({
       success: true,
@@ -31,4 +33,21 @@ async function getAnimalIntakesController(req, res, next) {
     next(error);
   }
 }
-export { createAnimalIntakeController, getAnimalIntakesController };
+
+async function getIntakeByIdController(req, res, next) {
+  try {
+    const intake = await getIntakeById(req.params.intakeId);
+
+    return res.status(200).json({
+      success: true,
+      intake,
+    });
+  } catch (error) {
+    next(error);
+  }
+}
+export {
+  createAnimalIntakeController,
+  getAnimalIntakesController,
+  getIntakeByIdController,
+};

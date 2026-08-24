@@ -97,4 +97,31 @@ async function findIntakesByAnimalId(animalId) {
   return result.rows;
 }
 
-export { insertAnimalIntake, findIntakesByAnimalId };
+async function findIntakeById(intakeId) {
+  const result = await pool.query(
+    `
+    SELECT   
+        intake_id,
+        animal_id,
+        intake_date::text AS intake_date,
+        intake_category,
+        intake_source,
+        found_location,
+        age_at_intake,
+        observed_condition,
+        rescued_by_user_id,
+        outside_rescuer_name,
+        outside_rescuer_contact,
+        notes,
+        created_by,
+        updated_by,
+        created_at,
+        updated_at
+    FROM animal_intakes
+    WHERE intake_id = $1`,
+    [intakeId],
+  );
+  return result.rows[0];
+}
+
+export { insertAnimalIntake, findIntakesByAnimalId, findIntakeById };
