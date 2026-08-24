@@ -2,10 +2,13 @@ import { validateAnimalId } from "../animals/animal.validation.js";
 import { findAnimalById } from "../animals/animal.repository.js";
 import { findUserById } from "../users/user.repository.js";
 
+import { createHash } from "node:crypto";
+
 import {
   validateCreateIntakeInput,
   validateIntakeId,
   validateUpdateIntakeInput,
+  validateIdempotencyKey,
 } from "./intake.validation.js";
 
 import {
@@ -13,14 +16,59 @@ import {
   findIntakesByAnimalId,
   findIntakeById,
   updateIntakeRecord,
+  findIntakeByIdempotencyKey,
 } from "./intake.repository.js";
+
+function createIntakeRequestHash({
+  animalId,
+  intakeDate,
+  intakeCategory,
+  intakeSource,
+  foundLocation,
+  ageAtIntake,
+  observedCondition,
+  rescuedByUserId,
+  outsideRescuerName,
+  outsideRescuerContact,
+  notes,
+}) {
+  const requestData = {
+    animalId,
+    intakeDate,
+    intakeCategory,
+    intakeSource,
+    foundLocation,
+    ageAtIntake,
+    observedCondition,
+    rescuedByUserId,
+    outsideRescuerName,
+    outsideRescuerContact,
+    notes,
+  };
+
+  return createHash("sha256").update(JSON.stringify(requestData)).digest("hex");
+}
 
 async function validateIntakeSourceDetails({
   intakeSource,
   rescuedByUserId,
   outsideRescuerName,
+  outsideRescuerContact,
 }) {
-  if (intakeSource === "MNP_VOLUNTEER" && !rescuedByUserId) {
+  let finalRescuedByUserId = rescuedByUserId;
+  let finalOutsideRescuerName = outsideRescuerName;
+  let finalOutsideRescuerContact = outsideRescuerContact;
+
+  if (intakeSource === "OUTSIDE_PERSON") {
+    finalRescuedByUserId = null;
+  }
+
+  if (intakeSource === "MNP_VOLUNTEER" || intakeSource === "FOUND_BY_MNP") {
+    finalOutsideRescuerName = null;
+    finalOutsideRescuerContact = null;
+  }
+
+  if (intakeSource === "MNP_VOLUNTEER" && !finalRescuedByUserId) {
     const error = new Error(
       "Rescued by user ID is required for MNP volunteer intake",
     );
@@ -28,7 +76,7 @@ async function validateIntakeSourceDetails({
     throw error;
   }
 
-  if (intakeSource === "OUTSIDE_PERSON" && !outsideRescuerName) {
+  if (intakeSource === "OUTSIDE_PERSON" && !finalOutsideRescuerName) {
     const error = new Error(
       "Outside rescuer name is required for outside person intake",
     );
@@ -36,8 +84,8 @@ async function validateIntakeSourceDetails({
     throw error;
   }
 
-  if (rescuedByUserId) {
-    const rescuer = await findUserById(rescuedByUserId);
+  if (finalRescuedByUserId) {
+    const rescuer = await findUserById(finalRescuedByUserId);
 
     if (!rescuer) {
       const error = new Error("Rescuer user not found");
@@ -62,10 +110,23 @@ async function validateIntakeSourceDetails({
       throw error;
     }
   }
+
+  return {
+    rescuedByUserId: finalRescuedByUserId,
+    outsideRescuerName: finalOutsideRescuerName,
+    outsideRescuerContact: finalOutsideRescuerContact,
+  };
 }
 
-async function createAnimalIntake(animalId, intakeData, createdBy) {
+async function createAnimalIntake(
+  animalId,
+  intakeData,
+  createdBy,
+  idempotencyKey,
+) {
   const validAnimalId = validateAnimalId(animalId);
+
+  const validIdempotencyKey = validateIdempotencyKey(idempotencyKey);
 
   const animal = await findAnimalById(validAnimalId);
 
@@ -88,13 +149,18 @@ async function createAnimalIntake(animalId, intakeData, createdBy) {
     notes,
   } = validateCreateIntakeInput(intakeData);
 
-  await validateIntakeSourceDetails({
+  const {
+    rescuedByUserId: finalRescuedByUserId,
+    outsideRescuerName: finalOutsideRescuerName,
+    outsideRescuerContact: finalOutsideRescuerContact,
+  } = await validateIntakeSourceDetails({
     intakeSource,
     rescuedByUserId,
     outsideRescuerName,
+    outsideRescuerContact,
   });
 
-  const createdIntake = await insertAnimalIntake({
+  const idempotencyRequestHash = createIntakeRequestHash({
     animalId: validAnimalId,
     intakeDate,
     intakeCategory,
@@ -102,30 +168,81 @@ async function createAnimalIntake(animalId, intakeData, createdBy) {
     foundLocation,
     ageAtIntake,
     observedCondition,
-    rescuedByUserId,
-    outsideRescuerName,
-    outsideRescuerContact,
+    rescuedByUserId: finalRescuedByUserId,
+    outsideRescuerName: finalOutsideRescuerName,
+    outsideRescuerContact: finalOutsideRescuerContact,
     notes,
-    createdBy,
   });
 
+  let createdIntake;
+  let isReplay = false;
+
+  try {
+    createdIntake = await insertAnimalIntake({
+      animalId: validAnimalId,
+      intakeDate,
+      intakeCategory,
+      intakeSource,
+      foundLocation,
+      ageAtIntake,
+      observedCondition,
+      rescuedByUserId: finalRescuedByUserId,
+      outsideRescuerName: finalOutsideRescuerName,
+      outsideRescuerContact: finalOutsideRescuerContact,
+      notes,
+      createdBy,
+      idempotencyKey: validIdempotencyKey,
+      idempotencyRequestHash,
+    });
+  } catch (error) {
+    if (
+      error.code !== "23505" ||
+      error.constraint !== "uq_animal_intakes_created_by_idempotency_key"
+    ) {
+      throw error;
+    }
+
+    const existingIntake = await findIntakeByIdempotencyKey(
+      createdBy,
+      validIdempotencyKey,
+    );
+
+    if (!existingIntake) {
+      throw error;
+    }
+
+    if (existingIntake.idempotency_request_hash !== idempotencyRequestHash) {
+      const conflictError = new Error(
+        "Idempotency key has already been used for a different intake request",
+      );
+      conflictError.statusCode = 409;
+      throw conflictError;
+    }
+
+    createdIntake = existingIntake;
+    isReplay = true;
+  }
+
   return {
-    intakeId: createdIntake.intake_id,
-    animalId: createdIntake.animal_id,
-    intakeDate: createdIntake.intake_date,
-    intakeCategory: createdIntake.intake_category,
-    intakeSource: createdIntake.intake_source,
-    foundLocation: createdIntake.found_location,
-    ageAtIntake: createdIntake.age_at_intake,
-    observedCondition: createdIntake.observed_condition,
-    rescuedByUserId: createdIntake.rescued_by_user_id,
-    outsideRescuerName: createdIntake.outside_rescuer_name,
-    outsideRescuerContact: createdIntake.outside_rescuer_contact,
-    notes: createdIntake.notes,
-    createdBy: createdIntake.created_by,
-    updatedBy: createdIntake.updated_by,
-    createdAt: createdIntake.created_at,
-    updatedAt: createdIntake.updated_at,
+    intake: {
+      intakeId: createdIntake.intake_id,
+      animalId: createdIntake.animal_id,
+      intakeDate: createdIntake.intake_date,
+      intakeCategory: createdIntake.intake_category,
+      intakeSource: createdIntake.intake_source,
+      foundLocation: createdIntake.found_location,
+      ageAtIntake: createdIntake.age_at_intake,
+      observedCondition: createdIntake.observed_condition,
+      rescuedByUserId: createdIntake.rescued_by_user_id,
+      outsideRescuerName: createdIntake.outside_rescuer_name,
+      outsideRescuerContact: createdIntake.outside_rescuer_contact,
+      notes: createdIntake.notes,
+      createdBy: createdIntake.created_by,
+      updatedBy: createdIntake.updated_by,
+      createdAt: createdIntake.created_at,
+      updatedAt: createdIntake.updated_at,
+    },
+    isReplay,
   };
 }
 
@@ -209,36 +326,43 @@ async function updateIntake(intakeId, intakeData, updatedBy) {
   const finalIntakeSource =
     updates.intakeSource ?? existingIntake.intake_source;
 
-  let finalRescuedByUserId =
+  const candidateRescuedByUserId =
     updates.rescuedByUserId !== undefined
       ? updates.rescuedByUserId
       : existingIntake.rescued_by_user_id;
 
-  let finalOutsideRescuerName =
+  const candidateOutsideRescuerName =
     updates.outsideRescuerName !== undefined
       ? updates.outsideRescuerName
       : existingIntake.outside_rescuer_name;
 
-  if (finalIntakeSource === "OUTSIDE_PERSON") {
-    updates.rescuedByUserId = null;
-    finalRescuedByUserId = null;
-  }
+  const candidateOutsideRescuerContact =
+    updates.outsideRescuerContact !== undefined
+      ? updates.outsideRescuerContact
+      : existingIntake.outside_rescuer_contact;
 
-  if (
-    finalIntakeSource === "MNP_VOLUNTEER" ||
-    finalIntakeSource === "FOUND_BY_MNP"
-  ) {
-    updates.outsideRescuerName = null;
-    updates.outsideRescuerContact = null;
-    finalOutsideRescuerName = null;
-  }
-
-  await validateIntakeSourceDetails({
-    intakeSource: finalIntakeSource,
+  const {
     rescuedByUserId: finalRescuedByUserId,
     outsideRescuerName: finalOutsideRescuerName,
+    outsideRescuerContact: finalOutsideRescuerContact,
+  } = await validateIntakeSourceDetails({
+    intakeSource: finalIntakeSource,
+    rescuedByUserId: candidateRescuedByUserId,
+    outsideRescuerName: candidateOutsideRescuerName,
+    outsideRescuerContact: candidateOutsideRescuerContact,
   });
 
+  if (finalRescuedByUserId !== existingIntake.rescued_by_user_id) {
+    updates.rescuedByUserId = finalRescuedByUserId;
+  }
+
+  if (finalOutsideRescuerName !== existingIntake.outside_rescuer_name) {
+    updates.outsideRescuerName = finalOutsideRescuerName;
+  }
+
+  if (finalOutsideRescuerContact !== existingIntake.outside_rescuer_contact) {
+    updates.outsideRescuerContact = finalOutsideRescuerContact;
+  }
   const updatedIntake = await updateIntakeRecord(
     validIntakeId,
     updates,

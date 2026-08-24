@@ -7,13 +7,16 @@ import {
 
 async function createAnimalIntakeController(req, res, next) {
   try {
-    const intake = await createAnimalIntake(
+    const idempotencyKey = req.get("Idempotency-Key");
+
+    const { intake, isReplay } = await createAnimalIntake(
       req.params.animalId,
       req.body,
       req.user.userId,
+      idempotencyKey,
     );
 
-    return res.status(201).json({
+    return res.status(isReplay ? 200 : 201).json({
       success: true,
       intake,
     });

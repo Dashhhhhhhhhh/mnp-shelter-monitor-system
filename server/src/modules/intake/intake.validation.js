@@ -1,5 +1,26 @@
 import { getCurrentManilaDate } from "../../utils/date.js";
 
+function validateIdempotencyKey(idempotencyKey) {
+  if (typeof idempotencyKey !== "string" || idempotencyKey.trim() === "") {
+    const error = new Error("Idempotency-Key header is required");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  const normalizedKey = idempotencyKey.trim();
+
+  const uuidRegex =
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+  if (!uuidRegex.test(normalizedKey)) {
+    const error = new Error("Idempotency-Key must be a valid UUID");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  return normalizedKey;
+}
+
 function validateCreateIntakeInput(intakeData) {
   if (
     !intakeData.intakeDate ||
@@ -392,7 +413,7 @@ function validateUpdateIntakeInput(intakeData) {
 
     updates.outsideRescuerContact = outsideRescuerContact;
   }
-  
+
   if (hasField("intakeDate")) {
     if (typeof intakeData.intakeDate !== "string") {
       const error = new Error("Intake date must be a string");
@@ -532,4 +553,5 @@ export {
   validateCreateIntakeInput,
   validateIntakeId,
   validateUpdateIntakeInput,
+  validateIdempotencyKey,
 };
