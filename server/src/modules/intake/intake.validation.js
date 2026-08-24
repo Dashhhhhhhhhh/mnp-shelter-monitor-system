@@ -326,7 +326,7 @@ function validateUpdateIntakeInput(intakeData) {
       intakeData.observedCondition !== null &&
       typeof intakeData.observedCondition !== "string"
     ) {
-      const error = new Error("Observe condition musst be a string or null");
+      const error = new Error("Observed condition must be a string or null");
       error.statusCode = 400;
       throw error;
     }
@@ -337,63 +337,62 @@ function validateUpdateIntakeInput(intakeData) {
         : null;
 
     updates.observedCondition = observedCondition;
+  } // <-- THIS was missing / misplaced
 
-    if (hasField("outsideRescuerName")) {
-      if (
-        intakeData.outsideRescuerName !== null &&
-        typeof intakeData.outsideRescuerName !== "string"
-      ) {
-        const error = new Error(
-          "Outside rescuer name must be a string or null",
-        );
-        error.statusCode = 400;
-        throw error;
-      }
-
-      const outsideRescuerName =
-        typeof intakeData.outsideRescuerName === "string"
-          ? intakeData.outsideRescuerName.trim() || null
-          : null;
-
-      if (outsideRescuerName && outsideRescuerName.length > 100) {
-        const error = new Error(
-          "Outside rescuer name must not exceed 100 characters",
-        );
-        error.statusCode = 400;
-        throw error;
-      }
-
-      updates.outsideRescuerName = outsideRescuerName;
+  if (hasField("outsideRescuerName")) {
+    if (
+      intakeData.outsideRescuerName !== null &&
+      typeof intakeData.outsideRescuerName !== "string"
+    ) {
+      const error = new Error("Outside rescuer name must be a string or null");
+      error.statusCode = 400;
+      throw error;
     }
 
-    if (hasField("outsideRescuerContact")) {
-      if (
-        intakeData.outsideRescuerContact !== null &&
-        typeof intakeData.outsideRescuerContact !== "string"
-      ) {
-        const error = new Error(
-          "Outside rescuer contact must be a string or null",
-        );
-        error.statusCode = 400;
-        throw error;
-      }
+    const outsideRescuerName =
+      typeof intakeData.outsideRescuerName === "string"
+        ? intakeData.outsideRescuerName.trim() || null
+        : null;
 
-      const outsideRescuerContact =
-        typeof intakeData.outsideRescuerContact === "string"
-          ? intakeData.outsideRescuerContact.trim() || null
-          : null;
-
-      if (outsideRescuerContact && outsideRescuerContact.length > 100) {
-        const error = new Error(
-          "Outside rescuer contact must not exceed 100 characters",
-        );
-        error.statusCode = 400;
-        throw error;
-      }
-      updates.outsideRescuerContact = outsideRescuerContact;
+    if (outsideRescuerName && outsideRescuerName.length > 100) {
+      const error = new Error(
+        "Outside rescuer name must not exceed 100 characters",
+      );
+      error.statusCode = 400;
+      throw error;
     }
+
+    updates.outsideRescuerName = outsideRescuerName;
   }
 
+  if (hasField("outsideRescuerContact")) {
+    if (
+      intakeData.outsideRescuerContact !== null &&
+      typeof intakeData.outsideRescuerContact !== "string"
+    ) {
+      const error = new Error(
+        "Outside rescuer contact must be a string or null",
+      );
+      error.statusCode = 400;
+      throw error;
+    }
+
+    const outsideRescuerContact =
+      typeof intakeData.outsideRescuerContact === "string"
+        ? intakeData.outsideRescuerContact.trim() || null
+        : null;
+
+    if (outsideRescuerContact && outsideRescuerContact.length > 100) {
+      const error = new Error(
+        "Outside rescuer contact must not exceed 100 characters",
+      );
+      error.statusCode = 400;
+      throw error;
+    }
+
+    updates.outsideRescuerContact = outsideRescuerContact;
+  }
+  
   if (hasField("intakeDate")) {
     if (typeof intakeData.intakeDate !== "string") {
       const error = new Error("Intake date must be a string");
@@ -529,4 +528,8 @@ function validateUpdateIntakeInput(intakeData) {
   return updates;
 }
 
-export { validateCreateIntakeInput, validateIntakeId, validateUpdateIntakeInput };
+export {
+  validateCreateIntakeInput,
+  validateIntakeId,
+  validateUpdateIntakeInput,
+};

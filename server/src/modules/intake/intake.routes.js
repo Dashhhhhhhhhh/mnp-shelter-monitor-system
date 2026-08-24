@@ -6,38 +6,41 @@ import {
   getIntakeByIdController,
   updateIntakeController,
 } from "./intake.controller.js";
+
 import { authenticate } from "../../middlewares/authenticate.js";
 import { authorizeRoles } from "../../middlewares/authorizeRoles.js";
+
 import { findIntakeById } from "./intake.repository.js";
 import { updateIntake } from "./intake.service.js";
 
-const router = express.Router({ mergeParams: true });
+const animalIntakeRouter = express.Router({ mergeParams: true });
+const intakeRouter = express.Router();
 
-router.post(
+animalIntakeRouter.post(
   "/",
   authenticate,
   authorizeRoles("ADMIN", "VOLUNTEER"),
   createAnimalIntakeController,
 );
 
-router.get(
+animalIntakeRouter.get(
   "/",
   authenticate,
   authorizeRoles("ADMIN", "VOLUNTEER", "CARETAKER"),
   getAnimalIntakesController,
 );
 
-router.get(
+intakeRouter.get(
   "/:intakeId",
   authenticate,
   authorizeRoles("ADMIN", "VOLUNTEER", "CARETAKER"),
   getIntakeByIdController,
 );
 
-router.patch(
+intakeRouter.patch(
   "/:intakeId",
   authenticate,
   authorizeRoles("ADMIN", "VOLUNTEER"),
   updateIntakeController,
 );
-export default router;
+export { animalIntakeRouter, intakeRouter };
