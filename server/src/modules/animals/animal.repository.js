@@ -32,9 +32,13 @@ async function insertAnimal({
   healthStatus,
   adoptionStatus,
   createdBy,
+  idempotencyKey,
+  idempotencyRequestHash,
 }) {
   const result = await pool.query(
     `INSERT INTO animals (
+      idempotency_key,
+      idempotency_request_hash,
       animal_code,
       animal_name,
       species,
@@ -51,8 +55,8 @@ async function insertAnimal({
       updated_by
     )
     VALUES (
-      $1, $2, $3, $4, $5, $6, $7,
-      $8, $9, $10, $11, $12, $13, $13
+      $1, $2, $3, $4, $5, $6, $7, $8,
+      $9, $10, $11, $12, $13, $14, $15, $15
     )
     RETURNING
       animal_id,
@@ -63,7 +67,7 @@ async function insertAnimal({
       life_stage,
       sex,
       collar_color,
-      birth_date,
+      birth_date::text AS birth_date,
       birth_date_is_estimated,
       status,
       health_status,
@@ -71,6 +75,8 @@ async function insertAnimal({
       created_by,
       created_at`,
     [
+      idempotencyKey,
+      idempotencyRequestHash,
       animalCode,
       animalName,
       species,
@@ -89,50 +95,6 @@ async function insertAnimal({
 
   return result.rows[0];
 }
-
-function validateAnimalListQuery(query) {
-  const search = typeof query.search === "string" ? query.search.trim() : "";
-
-  const species = query.species ? query.species.trim().toUpperCase() : null;
-
-  const sex = query.sex ? query.sex.trim().toUpperCase() : null;
-
-  const lifeStage = query.lifeStage
-    ? query.lifeStage.trim().toUpperCase()
-    : null;
-
-  const healthStatus = query.healthStatus
-    ? query.healthStatus.trim().toUpperCase()
-    : null;
-
-  const adoptionStatus = query.adoptionStatus
-    ? query.adoptionStatus.trim().toUpperCase()
-    : null;
-
-  const status = query.status ? query.status.trim().toUpperCase() : null;
-
-  const sortBy = query.sortBy || "createdAt";
-  const sortOrder = query.sortOrder?.toLowerCase() === "asc" ? "asc" : "desc";
-
-  const page = Math.max(parseInt(query.page, 10) || 1, 1);
-
-  const limit = Math.min(Math.max(parseInt(query.limit, 10) || 20, 1), 100);
-
-  return {
-    search,
-    species,
-    sex,
-    lifeStage,
-    healthStatus,
-    adoptionStatus,
-    status,
-    sortBy,
-    sortOrder,
-    page,
-    limit,
-  };
-}
-
 async function findAnimals({
   search,
   species,
@@ -240,7 +202,7 @@ async function findAnimals({
       a.life_stage,
       a.sex,
       a.collar_color,
-      a.birth_date,
+      a.birth_date::text AS birth_date,
       a.birth_date_is_estimated,
       a.status,
       a.health_status,
@@ -272,7 +234,7 @@ async function findAnimalById(animalId) {
       a.life_stage,
       a.sex,
       a.collar_color,
-      a.birth_date,
+      a.birth_date::text AS birth_date,
       a.birth_date_is_estimated,
       a.status,
       a.health_status,
@@ -337,7 +299,7 @@ async function updateAnimalRecord(animalId, updates, updatedBy) {
        life_stage,
        sex,
        collar_color,
-       birth_date,
+       birth_date::text AS birth_date,
        birth_date_is_estimated,
        status,
        health_status,
@@ -375,12 +337,42 @@ async function archiveAnimalRecord(animalId, archivedBy) {
 
   return result.rows[0];
 }
+
+async function findAnimalByIdempotencyKey(createdBy, idempotencyKey) {
+  const result = await pool.query(
+    `SELECT
+      animal_id,
+      animal_code,
+      animal_name,
+      species,
+      breed,
+      life_stage,
+      sex,
+      collar_color,
+      birth_date::text AS birth_date,
+      birth_date_is_estimated,
+      status,
+      health_status,
+      adoption_status,
+      created_by,
+      updated_by,
+      created_at,
+      updated_at,
+      idempotency_request_hash
+    FROM animals
+    WHERE created_by = $1
+      AND idempotency_key = $2`,
+    [createdBy, idempotencyKey],
+  );
+
+  return result.rows[0];
+}
 export {
   getNextAnimalCodeNumber,
   insertAnimal,
-  validateAnimalListQuery,
   findAnimals,
   findAnimalById,
   updateAnimalRecord,
   archiveAnimalRecord,
+  findAnimalByIdempotencyKey,
 };

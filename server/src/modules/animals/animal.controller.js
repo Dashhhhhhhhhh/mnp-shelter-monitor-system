@@ -8,9 +8,15 @@ import {
 
 async function createAnimalController(req, res, next) {
   try {
-    const animal = await createAnimal(req.body, req.user.userId);
+    const idempotencyKey = req.get("Idempotency-Key");
 
-    return res.status(201).json({
+    const { animal, isReplay } = await createAnimal(
+      req.body,
+      req.user.userId,
+      idempotencyKey,
+    );
+
+    return res.status(isReplay ? 200 : 201).json({
       success: true,
       animal,
     });

@@ -1,3 +1,5 @@
+import crypto from "crypto";
+
 import {
   getNextAnimalCodeNumber,
   insertAnimal,
@@ -5,6 +7,7 @@ import {
   findAnimalById,
   updateAnimalRecord,
   archiveAnimalRecord,
+  findAnimalByIdempotencyKey,
 } from "./animal.repository.js";
 
 import {
@@ -14,6 +17,23 @@ import {
   validateUpdateAnimalInput,
 } from "./animal.validation.js";
 
+function validateIdempotencyKey(idempotencyKey) {
+  const uuidPattern =
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+  if (typeof idempotencyKey !== "string" || !uuidPattern.test(idempotencyKey)) {
+    const error = new Error("A valid Idempotency-Key header is required");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  return idempotencyKey;
+}
+
+function createAnimalRequestHash(data) {
+  return crypto.createHash("sha256").update(JSON.stringify(data)).digest("hex");
+}
+
 async function generateAnimalCode(species) {
   const nextNumber = await getNextAnimalCodeNumber(species);
 
@@ -22,7 +42,9 @@ async function generateAnimalCode(species) {
   return `M&P-${species}-${paddedNumber}`;
 }
 
-async function createAnimal(animalData, createdBy) {
+async function createAnimal(animalData, createdBy, idempotencyKey) {
+  const validIdempotencyKey = validateIdempotencyKey(idempotencyKey);
+
   const {
     species,
     sex,
@@ -35,43 +57,134 @@ async function createAnimal(animalData, createdBy) {
     healthStatus,
   } = validateCreateAnimalInput(animalData);
 
-  const animalCode = await generateAnimalCode(species);
-
   const status = "ACTIVE";
   const adoptionStatus = "NOT_READY";
 
-  const createdAnimal = await insertAnimal({
-    animalCode,
-    animalName,
+  const idempotencyRequestHash = createAnimalRequestHash({
     species,
-    breed,
-    lifeStage,
     sex,
+    lifeStage,
+    animalName,
+    breed,
     collarColor,
     birthDate,
     birthDateIsEstimated,
-    status,
     healthStatus,
-    adoptionStatus,
-    createdBy,
   });
 
+  // Check for a normal replay BEFORE generating an animal code.
+  const existingAnimal = await findAnimalByIdempotencyKey(
+    createdBy,
+    validIdempotencyKey,
+  );
+
+  if (existingAnimal) {
+    if (existingAnimal.idempotency_request_hash !== idempotencyRequestHash) {
+      const error = new Error(
+        "Idempotency key has already been used for a different animal request",
+      );
+      error.statusCode = 409;
+      throw error;
+    }
+
+    return {
+      animal: {
+        animalId: existingAnimal.animal_id,
+        animalCode: existingAnimal.animal_code,
+        animalName: existingAnimal.animal_name,
+        species: existingAnimal.species,
+        breed: existingAnimal.breed,
+        lifeStage: existingAnimal.life_stage,
+        sex: existingAnimal.sex,
+        collarColor: existingAnimal.collar_color,
+        birthDate: existingAnimal.birth_date,
+        birthDateIsEstimated: existingAnimal.birth_date_is_estimated,
+        status: existingAnimal.status,
+        healthStatus: existingAnimal.health_status,
+        adoptionStatus: existingAnimal.adoption_status,
+        createdBy: existingAnimal.created_by,
+        createdAt: existingAnimal.created_at,
+      },
+      isReplay: true,
+    };
+  }
+
+  let createdAnimal;
+  let isReplay = false;
+
+  try {
+    // Only generate a code when no existing replay was found.
+    const animalCode = await generateAnimalCode(species);
+
+    createdAnimal = await insertAnimal({
+      animalCode,
+      animalName,
+      species,
+      breed,
+      lifeStage,
+      sex,
+      collarColor,
+      birthDate,
+      birthDateIsEstimated,
+      status,
+      healthStatus,
+      adoptionStatus,
+      createdBy,
+      idempotencyKey: validIdempotencyKey,
+      idempotencyRequestHash,
+    });
+  } catch (error) {
+    // Still needed for simultaneous/concurrent requests.
+    if (
+      error.code !== "23505" ||
+      error.constraint !== "uq_animals_created_by_idempotency_key"
+    ) {
+      throw error;
+    }
+
+    const concurrentExistingAnimal = await findAnimalByIdempotencyKey(
+      createdBy,
+      validIdempotencyKey,
+    );
+
+    if (!concurrentExistingAnimal) {
+      throw error;
+    }
+
+    if (
+      concurrentExistingAnimal.idempotency_request_hash !==
+      idempotencyRequestHash
+    ) {
+      const conflictError = new Error(
+        "Idempotency key has already been used for a different animal request",
+      );
+      conflictError.statusCode = 409;
+      throw conflictError;
+    }
+
+    createdAnimal = concurrentExistingAnimal;
+    isReplay = true;
+  }
+
   return {
-    animalId: createdAnimal.animal_id,
-    animalCode: createdAnimal.animal_code,
-    animalName: createdAnimal.animal_name,
-    species: createdAnimal.species,
-    breed: createdAnimal.breed,
-    lifeStage: createdAnimal.life_stage,
-    sex: createdAnimal.sex,
-    collarColor: createdAnimal.collar_color,
-    birthDate: createdAnimal.birth_date,
-    birthDateIsEstimated: createdAnimal.birth_date_is_estimated,
-    status: createdAnimal.status,
-    healthStatus: createdAnimal.health_status,
-    adoptionStatus: createdAnimal.adoption_status,
-    createdBy: createdAnimal.created_by,
-    createdAt: createdAnimal.created_at,
+    animal: {
+      animalId: createdAnimal.animal_id,
+      animalCode: createdAnimal.animal_code,
+      animalName: createdAnimal.animal_name,
+      species: createdAnimal.species,
+      breed: createdAnimal.breed,
+      lifeStage: createdAnimal.life_stage,
+      sex: createdAnimal.sex,
+      collarColor: createdAnimal.collar_color,
+      birthDate: createdAnimal.birth_date,
+      birthDateIsEstimated: createdAnimal.birth_date_is_estimated,
+      status: createdAnimal.status,
+      healthStatus: createdAnimal.health_status,
+      adoptionStatus: createdAnimal.adoption_status,
+      createdBy: createdAnimal.created_by,
+      createdAt: createdAnimal.created_at,
+    },
+    isReplay,
   };
 }
 

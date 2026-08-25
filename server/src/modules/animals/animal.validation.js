@@ -1,6 +1,16 @@
 import { getCurrentManilaDate } from "../../utils/date.js";
 
 function validateCreateAnimalInput(animalData) {
+  if (
+    !animalData ||
+    typeof animalData !== "object" ||
+    Array.isArray(animalData)
+  ) {
+    const error = new Error("Animal data must be an object");
+    error.statusCode = 400;
+    throw error;
+  }
+
   if (!animalData.species || !animalData.sex || !animalData.lifeStage) {
     const error = new Error("Species, sex, and life stage are required");
     error.statusCode = 400;
@@ -372,6 +382,16 @@ function validateAnimalId(animalId) {
 }
 
 function validateUpdateAnimalInput(animalData) {
+  if (
+    !animalData ||
+    typeof animalData !== "object" ||
+    Array.isArray(animalData)
+  ) {
+    const error = new Error("Animal data must be an object");
+    error.statusCode = 400;
+    throw error;
+  }
+
   const updates = {};
 
   const hasField = (field) =>

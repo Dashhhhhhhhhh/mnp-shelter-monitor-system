@@ -4,116 +4,706 @@
 
 Manages permanent animal profiles in the M & P Shelter Monitoring System.
 
-Animal records are preserved for historical purposes. Normal operations do
-not permanently delete animal rows.
+Animal records represent the permanent identity of an animal.
+
+Animal records are preserved for historical purposes. Normal operations do not permanently delete animal rows.
+
+Animal intake information is stored separately in the Animal Intakes module.
 
 ---
 
-## Access
+# Access
 
-### ADMIN
+## ADMIN
+
+Can:
 
 - Create animals
 - View animals
 - Update animals
 - Archive animals
 
-### VOLUNTEER
+## VOLUNTEER
+
+Can:
 
 - Create animals
 - View animals
 - Update animals
 
-### CARETAKER
+## CARETAKER
+
+Can:
 
 - View animals
 
+All Animals endpoints require authentication.
+
 ---
 
-# Endpoints
+# API Endpoints
 
-## POST /api/animals
+Implemented endpoints:
 
-Creates a new animal profile.
+- `POST /api/animals`
+- `GET /api/animals`
+- `GET /api/animals/:animalId`
+- `PATCH /api/animals/:animalId`
+- `PATCH /api/animals/:animalId/archive`
 
-### Access
+---
 
-- ADMIN
-- VOLUNTEER
+# Create Animal
 
-### Required Fields
+## Endpoint
 
-- species
-- sex
-- lifeStage
+`POST /api/animals`
 
-### Optional Fields
+Creates a new permanent animal profile.
 
-- animalName
-- breed
-- collarColor
-- birthDate
-- birthDateIsEstimated
-- healthStatus
+## Access
 
-### Backend-Controlled Fields
+Allowed roles:
+
+- `ADMIN`
+- `VOLUNTEER`
+
+---
+
+## Required Fields
+
+- `species`
+- `sex`
+- `lifeStage`
+
+---
+
+## Optional Fields
+
+- `animalName`
+- `breed`
+- `collarColor`
+- `birthDate`
+- `birthDateIsEstimated`
+- `healthStatus`
+
+---
+
+## Backend-Controlled Fields
 
 The client does not control:
 
-- animalCode
-- status
-- adoptionStatus
-- createdBy
-- updatedBy
+- `animalCode`
+- `status`
+- `adoptionStatus`
+- `createdBy`
+- `updatedBy`
+- `createdAt`
+- `updatedAt`
+- `idempotencyKey`
+- `idempotencyRequestHash`
 
 Default values:
 
-- status = ACTIVE
-- adoptionStatus = NOT_READY
-- healthStatus = UNKNOWN when not supplied
+- `status = ACTIVE`
+- `adoptionStatus = NOT_READY`
+- `healthStatus = UNKNOWN` when not supplied
 
-### Animal Code
+The authenticated user's ID is used for:
 
-Animal codes are automatically generated using PostgreSQL sequences.
+- `created_by`
+- `updated_by`
 
-Examples:
-
-- M&P-CAT-001
-- M&P-CAT-002
-- M&P-DOG-001
-
-CAT and DOG use separate sequences.
-
-Sequence numbers may contain gaps if a number is generated but the later
-INSERT fails. Gaps are acceptable because animal codes are identifiers, not
-accounting numbers.
-
-### Create Flow
-
-POST /api/animals
-→ authenticate
-→ authorizeRoles("ADMIN", "VOLUNTEER")
-→ controller
-→ service
-→ validateCreateAnimalInput()
-→ generate animal code
-→ insertAnimal()
-→ PostgreSQL
-→ 201 Created
+Audit user IDs are never trusted from `req.body`.
 
 ---
 
-## GET /api/animals
+# Create Request Body Validation
+
+The request body must be a normal JSON object.
+
+Valid example:
+
+```json
+{
+  "species": "CAT",
+  "sex": "FEMALE",
+  "lifeStage": "KITTEN",
+  "animalName": "Mochi"
+}
+```
+
+Invalid examples include:
+
+```json
+null
+```
+
+and:
+
+```json
+[]
+```
+
+Invalid request-body structures return:
+
+`400 Bad Request`
+
+This prevents validation logic from attempting to access animal fields on an invalid body.
+
+---
+
+# Species
+
+Allowed values:
+
+- `CAT`
+- `DOG`
+
+---
+
+# Sex
+
+Allowed values:
+
+- `MALE`
+- `FEMALE`
+
+---
+
+# Life Stage
+
+Allowed values:
+
+- `KITTEN`
+- `PUPPY`
+- `ADULT`
+- `OTHER`
+
+Species and life-stage compatibility is enforced.
+
+Valid examples:
+
+- `CAT + KITTEN`
+- `CAT + ADULT`
+- `DOG + PUPPY`
+- `DOG + ADULT`
+
+Invalid examples:
+
+- `CAT + PUPPY`
+- `DOG + KITTEN`
+
+Invalid combinations return:
+
+`400 Bad Request`
+
+---
+
+# Animal Name
+
+`animalName` is optional.
+
+Maximum length:
+
+`50 characters`
+
+An animal may temporarily have no name.
+
+---
+
+# Breed
+
+`breed` is optional.
+
+Maximum length:
+
+`100 characters`
+
+Breed is stored as free text.
+
+---
+
+# Collar Color
+
+`collarColor` is optional.
+
+Maximum length:
+
+`20 characters`
+
+---
+
+# Birth Date
+
+`birthDate` is optional.
+
+Format:
+
+`YYYY-MM-DD`
+
+Rules:
+
+- must represent a real calendar date
+- cannot be in the future
+- may be `null` when unknown
+
+Example:
+
+`2026-07-01`
+
+---
+
+# Estimated Birth Date
+
+`birthDateIsEstimated` indicates whether a stored birth date is estimated.
+
+It must be a boolean.
+
+Example:
+
+```json
+{
+  "birthDate": "2026-07-01",
+  "birthDateIsEstimated": true
+}
+```
+
+The following state is invalid:
+
+```json
+{
+  "birthDate": null,
+  "birthDateIsEstimated": true
+}
+```
+
+A birth date cannot be marked as estimated when no birth date exists.
+
+---
+
+# Health Status
+
+Allowed values:
+
+- `HEALTHY`
+- `SICK`
+- `INJURED`
+- `UNDER_OBSERVATION`
+- `UNKNOWN`
+
+Default:
+
+`UNKNOWN`
+
+---
+
+# Animal Code
+
+Animal codes are automatically generated by the backend.
+
+Examples:
+
+- `M&P-CAT-001`
+- `M&P-CAT-002`
+- `M&P-DOG-001`
+- `M&P-DOG-002`
+
+CAT and DOG use separate PostgreSQL sequences.
+
+The application uses:
+
+- `animal_cat_code_seq`
+- `animal_dog_code_seq`
+
+The next number is retrieved from PostgreSQL and padded to three digits.
+
+Conceptual flow:
+
+species  
+↓  
+PostgreSQL sequence  
+↓  
+next number  
+↓  
+pad to three digits  
+↓  
+generate animal code
+
+Example:
+
+`9`
+
+becomes:
+
+`009`
+
+which produces:
+
+`M&P-DOG-009`
+
+---
+
+# Animal Code Sequence Gaps
+
+PostgreSQL sequences do not guarantee gapless numbering.
+
+A sequence number may be consumed even if a later operation fails.
+
+This is acceptable because animal codes are identifiers, not accounting or financial sequence numbers.
+
+However, normal idempotent request replays are now checked before generating another animal code, which avoids unnecessary sequence consumption during ordinary retries.
+
+---
+
+# Create Animal Idempotency
+
+Create Animal uses backend idempotency protection.
+
+The purpose is to prevent accidental duplicate animal creation caused by situations such as:
+
+- double-clicking the submit button
+- repeated form submission
+- frontend retries
+- mobile network retries
+- browser retries
+- request timeout followed by retry
+
+The client sends:
+
+`Idempotency-Key`
+
+as an HTTP request header.
+
+The controller reads it using:
+
+`req.get("Idempotency-Key")`
+
+The key must be a valid UUID.
+
+---
+
+# Idempotency Request Hash
+
+The backend creates a SHA-256 hash from the normalized animal creation request.
+
+The hash represents the user's intended create operation.
+
+The hash includes values such as:
+
+- `species`
+- `sex`
+- `lifeStage`
+- `animalName`
+- `breed`
+- `collarColor`
+- `birthDate`
+- `birthDateIsEstimated`
+- `healthStatus`
+
+Backend-generated values such as `animalCode` are not included in the request hash.
+
+This is important because the animal code is an implementation detail generated by the backend, not part of the user's original request.
+
+The database stores:
+
+- `idempotency_key`
+- `idempotency_request_hash`
+
+---
+
+# Idempotency Database Constraint
+
+Animal creation uses the unique database constraint:
+
+`uq_animals_created_by_idempotency_key`
+
+The uniqueness rule is:
+
+`UNIQUE (created_by, idempotency_key)`
+
+This means the same authenticated user cannot successfully create multiple animal rows using the same idempotency key.
+
+---
+
+# Idempotency Pre-Check
+
+Before generating a new animal code, the service checks:
+
+`findAnimalByIdempotencyKey(createdBy, idempotencyKey)`
+
+Conceptual flow:
+
+request received  
+↓  
+validate idempotency key  
+↓  
+validate and normalize animal data  
+↓  
+generate request hash  
+↓  
+check existing idempotency key  
+↓  
+existing request?
+
+If yes:
+
+same key + same hash  
+↓  
+return existing animal  
+↓  
+do not generate another animal code  
+↓  
+`200 OK`
+
+If the key exists but the hash is different:
+
+same key + different request  
+↓  
+`409 Conflict`
+
+If no existing request is found:
+
+generate animal code  
+↓  
+insert animal  
+↓  
+`201 Created`
+
+---
+
+# Why Idempotency Is Checked Before Animal Code Generation
+
+Originally, a repeated request could behave like:
+
+First request:
+
+→ generate `M&P-DOG-009`  
+→ insert animal
+
+Replay:
+
+→ generate `M&P-DOG-010`  
+→ database detects duplicate idempotency key  
+→ reject duplicate INSERT  
+→ return original `M&P-DOG-009`
+
+The database data remained correct, but sequence number `010` was unnecessarily consumed.
+
+The improved flow performs the idempotency lookup first.
+
+Now:
+
+First request:
+
+→ generate `M&P-DOG-009`  
+→ create animal
+
+Replay:
+
+→ existing idempotency request found  
+→ return existing `M&P-DOG-009`  
+→ `generateAnimalCode()` is not called again
+
+During testing, after replaying `M&P-DOG-009`, the database showed:
+
+`animal_dog_code_seq.last_value = 9`
+
+This confirmed that a normal replay did not consume another animal-code sequence number.
+
+---
+
+# Concurrency Protection
+
+The idempotency pre-check improves normal retry behavior, but the database unique constraint is still required.
+
+Two requests could arrive at nearly the same time:
+
+Request A checks idempotency key  
+→ no row found
+
+Request B checks idempotency key  
+→ no row found
+
+Both requests may then continue.
+
+The database unique constraint ensures only one request can successfully insert the row.
+
+PostgreSQL raises unique-violation error code:
+
+`23505`
+
+for the duplicate attempt.
+
+The service verifies that the violated constraint is:
+
+`uq_animals_created_by_idempotency_key`
+
+It then retrieves the existing animal and compares request hashes.
+
+Therefore the system uses two protections:
+
+Idempotency pre-check  
+→ efficient handling of normal retries
+
+Database UNIQUE constraint  
+→ concurrency/race-condition protection
+
+A sequence number may still theoretically be consumed during a rare concurrent race, which is acceptable.
+
+---
+
+# Idempotency Response Behavior
+
+## New Request
+
+New key + new request:
+
+→ animal created  
+→ `201 Created`
+
+---
+
+## Exact Replay
+
+Same authenticated user
+
+- same idempotency key
+- same normalized request data
+
+→ existing animal returned  
+→ no duplicate row created  
+→ no new animal code generated during normal replay  
+→ `200 OK`
+
+---
+
+## Idempotency Conflict
+
+Same authenticated user
+
+- same idempotency key
+- different request data
+
+→ request rejected  
+→ `409 Conflict`
+
+Message:
+
+`Idempotency key has already been used for a different animal request`
+
+A completely new intended animal creation must use a new idempotency key.
+
+---
+
+# Frontend Idempotency Behavior
+
+The future React Create Animal form should create a new idempotency key for each intended animal creation.
+
+Conceptually:
+
+new Create Animal form  
+↓  
+new idempotency key  
+↓  
+user fills form  
+↓  
+submit  
+↓  
+POST `/api/animals`
+
+Retries of the same intended submission should reuse the same idempotency key.
+
+A completely new animal creation should receive a new key.
+
+The frontend should also disable the Save button while the request is processing.
+
+Frontend button disabling:
+
+- reduces accidental double-clicks
+- improves user experience
+
+Backend idempotency:
+
+- protects data integrity
+- handles retries
+- handles duplicate POST requests
+
+Frontend protection alone is not sufficient.
+
+---
+
+# Create Flow
+
+`POST /api/animals`
+
+→ authenticate
+
+→ `authorizeRoles("ADMIN", "VOLUNTEER")`
+
+→ controller reads request body
+
+→ controller reads authenticated user
+
+→ controller reads `Idempotency-Key`
+
+→ service
+
+→ validate idempotency key
+
+→ `validateCreateAnimalInput()`
+
+→ normalize animal data
+
+→ create request hash
+
+→ check existing idempotency key
+
+If same key + same request:
+
+→ return existing animal
+
+→ `200 OK`
+
+If same key + different request:
+
+→ `409 Conflict`
+
+If new request:
+
+→ generate animal code
+
+→ `insertAnimal()`
+
+→ PostgreSQL
+
+→ `201 Created`
+
+The database unique constraint remains a second layer of protection against concurrent requests.
+
+---
+
+# Get Animals
+
+## Endpoint
+
+`GET /api/animals`
 
 Returns a searchable, filterable, sortable, paginated animal list.
 
-### Access
+## Access
 
-- ADMIN
-- VOLUNTEER
-- CARETAKER
+Allowed roles:
 
-### Search
+- `ADMIN`
+- `VOLUNTEER`
+- `CARETAKER`
+
+---
+
+# Search
+
+Query parameter:
 
 `search`
 
@@ -129,16 +719,18 @@ Example:
 
 `GET /api/animals?search=mo`
 
-### Filters
+---
+
+# Filters
 
 Supported filters:
 
-- species
-- sex
-- lifeStage
-- healthStatus
-- adoptionStatus
-- status
+- `species`
+- `sex`
+- `lifeStage`
+- `healthStatus`
+- `adoptionStatus`
+- `status`
 
 Examples:
 
@@ -146,53 +738,67 @@ Examples:
 
 `GET /api/animals?species=CAT&healthStatus=HEALTHY`
 
-### Sorting
+Invalid filter values return:
+
+`400 Bad Request`
+
+instead of silently returning an empty result.
+
+---
+
+# Sorting
 
 Supported sort fields:
 
-- createdAt
-- animalName
-- animalCode
-- species
-- lifeStage
-- healthStatus
-- adoptionStatus
+- `createdAt`
+- `animalName`
+- `animalCode`
+- `species`
+- `lifeStage`
+- `healthStatus`
+- `adoptionStatus`
 
 Supported sort orders:
 
-- asc
-- desc
+- `asc`
+- `desc`
 
-Default:
+Defaults:
 
-- sortBy = createdAt
-- sortOrder = desc
+- `sortBy = createdAt`
+- `sortOrder = desc`
 
 Example:
 
 `GET /api/animals?sortBy=animalName&sortOrder=asc`
 
-### Pagination
+Dynamic sort columns are selected from a backend-controlled allowlist.
 
-Query parameters:
+Raw user-provided SQL column names are never inserted directly into the query.
 
-- page
-- limit
+---
+
+# Pagination
+
+Supported query parameters:
+
+- `page`
+- `limit`
 
 Defaults:
 
-- page = 1
-- limit = 20
+- `page = 1`
+- `limit = 20`
 
 Maximum limit:
 
-- 100
+`100`
 
 Example:
 
 `GET /api/animals?page=2&limit=20`
 
-Response includes:
+Example pagination response:
 
 ```json
 {
@@ -203,105 +809,277 @@ Response includes:
     "totalPages": 2
   }
 }
+```
 
-### Archived Animals
+Pagination offset is calculated using:
+
+`(page - 1) * limit`
+
+The repository performs:
+
+- a COUNT query
+- a data query using LIMIT/OFFSET
+
+---
+
+# Archived Animals in List Results
 
 Archived animals are automatically excluded from normal list results.
 
----
+The repository begins its filtering with:
 
-## GET /api/animals/:animalId
+`a.is_archived = FALSE`
 
-Returns a single animal profile.
-
-### Access
-
-- ADMIN
-- VOLUNTEER
-- CARETAKER
-
-### Validation
-
-The animal ID must be a valid UUID.
-
-### Responses
-
-- 200 OK - Animal found
-- 400 Bad Request - Invalid UUID
-- 404 Not Found - Animal does not exist or has been archived
+Therefore archived records do not appear in normal animal searches or listings.
 
 ---
 
-## PATCH /api/animals/:animalId
+# Get Animal by ID
+
+## Endpoint
+
+`GET /api/animals/:animalId`
+
+Returns one animal profile.
+
+## Access
+
+Allowed roles:
+
+- `ADMIN`
+- `VOLUNTEER`
+- `CARETAKER`
+
+## Validation
+
+`animalId` must be a valid UUID.
+
+The repository also requires:
+
+`is_archived = FALSE`
+
+## Responses
+
+`200 OK`
+
+→ animal found
+
+`400 Bad Request`
+
+→ invalid UUID
+
+`404 Not Found`
+
+→ animal does not exist or has been archived
+
+---
+
+# Update Animal
+
+## Endpoint
+
+`PATCH /api/animals/:animalId`
 
 Updates editable animal profile fields.
 
-### Access
+## Access
 
-- ADMIN
-- VOLUNTEER
+Allowed roles:
 
-### Editable Fields
-
-- animalName
-- breed
-- lifeStage
-- sex
-- collarColor
-- birthDate
-- birthDateIsEstimated
-- healthStatus
-
-PATCH supports partial updates.
-
-For example, an update may contain only:
-
-    {
-      "collarColor": "Green",
-      "healthStatus": "UNDER_OBSERVATION"
-    }
-
-Only supplied fields are updated.
-
-### Protected Fields
-
-Normal profile updates cannot modify:
-
-- animalCode
-- species
-- status
-- adoptionStatus
-- createdBy
-- updatedBy
-
-`updatedBy` is automatically taken from the authenticated user's ID.
-
-`updatedAt` is automatically set by the backend/database.
-
-### Business Rules
-
-Species/life-stage compatibility is enforced.
-
-Examples:
-
-- CAT + KITTEN = valid
-- CAT + PUPPY = invalid
-- DOG + PUPPY = valid
-- DOG + KITTEN = invalid
-
-Birth-date consistency is also checked against the existing database record.
+- `ADMIN`
+- `VOLUNTEER`
 
 ---
 
-## PATCH /api/animals/:animalId/archive
+# Editable Fields
+
+PATCH supports:
+
+- `animalName`
+- `breed`
+- `lifeStage`
+- `sex`
+- `collarColor`
+- `birthDate`
+- `birthDateIsEstimated`
+- `healthStatus`
+
+PATCH supports partial updates.
+
+Example:
+
+```json
+{
+  "collarColor": "Green",
+  "healthStatus": "UNDER_OBSERVATION"
+}
+```
+
+Only supplied editable fields are updated.
+
+---
+
+# Protected Animal Fields
+
+Normal profile updates cannot modify:
+
+- `animalCode`
+- `species`
+- `status`
+- `adoptionStatus`
+- `createdBy`
+- `updatedBy`
+- `createdAt`
+- `updatedAt`
+- archive fields
+- idempotency fields
+
+`updatedBy` is automatically taken from:
+
+`req.user.userId`
+
+`updatedAt` is automatically updated by the repository/database.
+
+---
+
+# PATCH Request Body Validation
+
+The PATCH body must be a normal JSON object.
+
+Invalid examples include:
+
+```json
+null
+```
+
+and:
+
+```json
+[]
+```
+
+PATCH validation uses:
+
+`Object.prototype.hasOwnProperty.call(animalData, field)`
+
+This allows the backend to distinguish between:
+
+field not provided
+
+and:
+
+field intentionally provided with a value such as `null` or `false`
+
+---
+
+# Empty PATCH Protection
+
+An empty PATCH is rejected.
+
+Example:
+
+```json
+{}
+```
+
+Response:
+
+`400 Bad Request`
+
+Message:
+
+`At least one editable animal field is required`
+
+This also prevents the dynamic repository UPDATE query from receiving an empty SQL `SET` operation.
+
+---
+
+# PATCH Species and Life-Stage Business Rule
+
+Species cannot be changed through normal profile PATCH operations.
+
+The service therefore uses the animal's existing species when validating a life-stage update.
+
+Example:
+
+Existing animal:
+
+`species = CAT`
+
+PATCH:
+
+```json
+{
+  "lifeStage": "PUPPY"
+}
+```
+
+Result:
+
+`400 Bad Request`
+
+because `CAT + PUPPY` is invalid.
+
+---
+
+# PATCH Final Birth-Date State Validation
+
+PATCH validation must consider both:
+
+existing database state
+
+- new request fields
+
+Example:
+
+Existing:
+
+`birthDate = 2026-01-01`
+
+`birthDateIsEstimated = true`
+
+PATCH:
+
+```json
+{
+  "birthDate": null
+}
+```
+
+The final state would become:
+
+`birthDate = null`
+
+`birthDateIsEstimated = true`
+
+which is invalid.
+
+The service therefore calculates:
+
+- final birth date
+- final estimated flag
+
+before allowing the update.
+
+This prevents PATCH from leaving the database in a business-invalid state.
+
+---
+
+# Archive Animal
+
+## Endpoint
+
+`PATCH /api/animals/:animalId/archive`
 
 Soft-archives an animal record.
 
-### Access
+## Access
 
-ADMIN only.
+`ADMIN` only.
 
-### Purpose
+---
+
+# Archive Purpose
 
 Archiving is intended for records such as:
 
@@ -313,32 +1091,47 @@ Archiving is different from animal lifecycle status.
 
 Examples:
 
-- ADOPTED = lifecycle status
-- PASSED_AWAY = lifecycle status
-- MISSING = lifecycle status
-- ARCHIVED = record visibility
-
-### Archive Fields
-
-- is_archived
-- archived_at
-- archived_by
-
-When archived:
-
-- is_archived = TRUE
-- archived_at = current timestamp
-- archived_by = authenticated ADMIN
-- updated_by = authenticated ADMIN
-- updated_at = current timestamp
-
-The row is NOT deleted from PostgreSQL.
-
-Normal animal list and detail endpoints exclude archived records.
+- `ADOPTED` = lifecycle status
+- `PASSED_AWAY` = lifecycle status
+- `MISSING` = lifecycle status
+- `ESCAPED` = lifecycle status
+- archived = record visibility/administrative state
 
 ---
 
-# Validation
+# Archive Fields
+
+Animals include:
+
+- `is_archived`
+- `archived_at`
+- `archived_by`
+
+When archived:
+
+- `is_archived = TRUE`
+- `archived_at = NOW()`
+- `archived_by = authenticated ADMIN`
+- `updated_by = authenticated ADMIN`
+- `updated_at = NOW()`
+
+The row is not deleted from PostgreSQL.
+
+Normal list and detail endpoints exclude archived animals.
+
+---
+
+# Validation Layer
+
+Animal validation is contained in:
+
+`animal.validation.js`
+
+The repository does not perform request validation.
+
+This keeps responsibilities separated.
+
+---
 
 ## Create Validation
 
@@ -348,18 +1141,23 @@ Handled by:
 
 Checks include:
 
+- request body is an object
 - required fields
 - string types
 - allowed species
 - allowed sex
 - allowed life stage
 - species/life-stage compatibility
-- field length limits
-- birth date format
-- real calendar date
+- animal-name length
+- breed length
+- collar-color length
+- birth-date format
+- real calendar-date validation
 - birth date cannot be in the future
 - estimated birth-date consistency
 - allowed health status
+
+---
 
 ## List Query Validation
 
@@ -370,12 +1168,36 @@ Handled by:
 Checks and normalizes:
 
 - search
-- filters
-- sorting
+- species
+- sex
+- lifeStage
+- healthStatus
+- adoptionStatus
+- lifecycle status
+- sort field
+- sort order
 - page
 - limit
 
-Invalid filter values return 400 instead of silently returning an empty result.
+The duplicate list-query validator that previously existed in the repository was removed.
+
+Validation now belongs only in the validation layer.
+
+---
+
+## Animal ID Validation
+
+Handled by:
+
+`validateAnimalId()`
+
+Checks that the value is a valid UUID format.
+
+Invalid IDs return:
+
+`400 Bad Request`
+
+---
 
 ## Update Validation
 
@@ -383,7 +1205,88 @@ Handled by:
 
 `validateUpdateAnimalInput()`
 
-Only fields actually supplied in the PATCH request are validated and returned in the updates object.
+Checks include:
+
+- PATCH body is an object
+- only explicitly provided fields are processed
+- nullable-field validation
+- field length limits
+- life-stage values
+- sex values
+- birth-date validation
+- health-status validation
+- empty PATCH protection
+
+---
+
+# Date Handling
+
+`birth_date` is stored in PostgreSQL as a:
+
+`DATE`
+
+A birth date represents a calendar date rather than a specific point in time.
+
+Repository queries return:
+
+`birth_date::text AS birth_date`
+
+This prevents JavaScript/PostgreSQL timezone conversion from changing a date such as:
+
+`2026-07-01`
+
+into a UTC timestamp representing the previous calendar day.
+
+The API therefore returns:
+
+`2026-07-01`
+
+instead of an unnecessary timestamp.
+
+This pattern is used when returning `birth_date` from:
+
+- animal creation
+- animal list
+- get animal by ID
+- animal update
+
+Timestamp fields such as:
+
+- `created_at`
+- `updated_at`
+- `archived_at`
+
+remain timestamps because those values represent actual moments in time.
+
+---
+
+# Database Naming and API Naming
+
+PostgreSQL uses snake_case.
+
+Examples:
+
+- `animal_id`
+- `animal_code`
+- `animal_name`
+- `life_stage`
+- `birth_date`
+- `health_status`
+- `adoption_status`
+
+The service maps database results into JavaScript-friendly camelCase.
+
+Examples:
+
+- `animalId`
+- `animalCode`
+- `animalName`
+- `lifeStage`
+- `birthDate`
+- `healthStatus`
+- `adoptionStatus`
+
+This keeps the Node.js API and future React frontend consistent with JavaScript naming conventions.
 
 ---
 
@@ -392,7 +1295,8 @@ Only fields actually supplied in the PATCH request are validated and returned in
 The Animals repository demonstrates:
 
 - PostgreSQL sequences
-- parameterized queries
+- parameterized SQL queries
+- explicit SELECT fields
 - dynamic filters
 - dynamic WHERE clauses
 - safe sort-column allowlists
@@ -401,30 +1305,179 @@ The Animals repository demonstrates:
 - dynamic PATCH UPDATE statements
 - soft archiving
 - RETURNING clauses
+- PostgreSQL DATE-to-text conversion
+- idempotency-key lookup
+- database unique-constraint handling
 
 Dynamic SQL values remain parameterized.
+
+Example:
+
+`WHERE animal_id = $1`
 
 Allowed dynamic column names come from backend-controlled maps instead of directly from user input.
 
 ---
 
+# Important Repository Functions
+
+Current important Animals repository functions include:
+
+- `getNextAnimalCodeNumber()`
+- `insertAnimal()`
+- `findAnimals()`
+- `findAnimalById()`
+- `updateAnimalRecord()`
+- `archiveAnimalRecord()`
+- `findAnimalByIdempotencyKey()`
+
+---
+
+# Service Responsibilities
+
+The Animals service coordinates business workflows.
+
+Important service functions include:
+
+- `createAnimal()`
+- `getAnimals()`
+- `getAnimalById()`
+- `updateAnimal()`
+- `archiveAnimal()`
+
+Supporting service logic includes:
+
+- animal-code generation
+- idempotency-key validation
+- request hashing
+- idempotency replay detection
+- idempotency conflict detection
+- species/life-stage rules
+- final birth-date state validation
+- snake_case to camelCase mapping
+
+---
+
+# Layer Responsibilities
+
+The module follows:
+
+Route  
+↓  
+Middleware  
+↓  
+Controller  
+↓  
+Service  
+↓  
+Repository  
+↓  
+PostgreSQL
+
+## Route
+
+Responsible for:
+
+- defining endpoints
+- authentication middleware
+- RBAC middleware
+- selecting the controller
+
+## Controller
+
+Responsible for HTTP-specific values such as:
+
+- `req.params`
+- `req.query`
+- `req.body`
+- `req.user.userId`
+- `req.get("Idempotency-Key")`
+
+Controllers remain thin.
+
+## Validation
+
+Responsible for:
+
+- request shape
+- types
+- formats
+- enum values
+- field normalization
+
+## Service
+
+Responsible for:
+
+- workflows
+- business rules
+- idempotency behavior
+- final-state validation
+- API response mapping
+
+## Repository
+
+Responsible for:
+
+- PostgreSQL queries
+- sequences
+- inserts
+- selects
+- updates
+- archive operations
+- idempotency lookup
+
+---
+
 # Audit Rules
 
-On CREATE:
+## CREATE
 
-- created_by = authenticated user
-- updated_by = authenticated user
+`created_by`
 
-On UPDATE:
+→ authenticated user
 
-- created_by remains unchanged
-- updated_by = authenticated user
+`updated_by`
 
-On ARCHIVE:
+→ authenticated user
 
-- archived_by = authenticated ADMIN
-- archived_at = current timestamp
-- updated_by = authenticated ADMIN
+Both initially contain the same user ID.
+
+---
+
+## UPDATE
+
+`created_by`
+
+→ remains unchanged
+
+`updated_by`
+
+→ authenticated user performing the update
+
+`updated_at`
+
+→ current timestamp
+
+---
+
+## ARCHIVE
+
+`archived_by`
+
+→ authenticated ADMIN
+
+`archived_at`
+
+→ current timestamp
+
+`updated_by`
+
+→ authenticated ADMIN
+
+`updated_at`
+
+→ current timestamp
 
 Audit user IDs are never accepted from `req.body`.
 
@@ -432,29 +1485,368 @@ Audit user IDs are never accepted from `req.body`.
 
 # Database Migrations
 
-Relevant migrations:
+Relevant Animals migrations include:
 
-- 023 - animal code sequences
-- 024 - updated animal life-stage constraint
-- 025 - animal archiving fields
+- `023` - animal CAT/DOG code sequences
+- `024` - updated animal life-stage constraint
+- `025` - animal soft-archive fields
+- Animal creation idempotency migration - added idempotency columns and unique constraint
+
+# Database Migrations
+
+Relevant Animals migrations include:
+
+- `023_add_animal_code_sequences.sql`
+- `024_update_animal_life_stage_constraint.sql`
+- `025_add_animal_archiving.sql`
+- `028_add_animals_idempotency.sql`
+
+The idempotency migration added:
+
+- `idempotency_key UUID`
+- `idempotency_request_hash VARCHAR(64)`
+- `UNIQUE (created_by, idempotency_key)`
+
+The idempotency columns are nullable so animal rows created before idempotency was introduced remain valid.
+Use the actual migration number/filename used in the project for the idempotency migration when maintaining the migration list.
 
 ---
 
-# Current Animals v1 Status
+# Error Behavior
 
-Implemented:
+Important Animals API responses include:
 
-- Create animal
-- Automatic species-based animal codes
-- List animals
-- Search
-- Filtering
-- Sorting
-- Pagination
-- Get animal by ID
-- Partial profile update
-- UUID validation
-- Soft archive
-- Audit fields
-- Role-based access
-- Archived-record filtering
+## 201 Created
+
+Used when:
+
+- a new animal is successfully created
+
+## 200 OK
+
+Used when:
+
+- animal list succeeds
+- get animal succeeds
+- PATCH succeeds
+- archive succeeds
+- an idempotent create replay returns the existing animal
+
+## 400 Bad Request
+
+Used for:
+
+- invalid UUID
+- invalid request body
+- missing required fields
+- invalid enum values
+- invalid date
+- future birth date
+- invalid species/life-stage combination
+- invalid estimated birth-date state
+- empty PATCH
+- missing/invalid idempotency key
+
+## 401 Unauthorized
+
+Used for:
+
+- missing authentication
+- invalid authentication
+
+## 403 Forbidden
+
+Used when:
+
+- authenticated user does not have the required role
+
+## 404 Not Found
+
+Used when:
+
+- animal does not exist
+- animal has been archived
+
+## 409 Conflict
+
+Used when:
+
+- an idempotency key is reused for different animal creation data
+
+---
+
+# Manual Testing and Hardening Verification
+
+The Animals module was manually tested using Thunder Client and PostgreSQL.
+
+---
+
+## Create Animal
+
+Endpoint:
+
+`POST /api/animals`
+
+Verified:
+
+- valid animal creates successfully
+- animal code is automatically generated
+- audit user is populated
+- birth date is returned in `YYYY-MM-DD`
+- response is `201 Created`
+
+---
+
+## Idempotent Replay
+
+The same:
+
+- URL
+- request body
+- authenticated user
+- `Idempotency-Key`
+
+was submitted again.
+
+Verified:
+
+- response is `200 OK`
+- same `animalId` returned
+- same `animalCode` returned
+- no second animal row created
+
+---
+
+## Idempotency Conflict
+
+The same idempotency key was reused with different animal data.
+
+Expected behavior:
+
+`409 Conflict`
+
+This prevents one key from representing two different create operations.
+
+---
+
+## Database Duplicate Verification
+
+The database was checked using:
+
+```sql
+SELECT
+  created_by,
+  idempotency_key,
+  COUNT(*) AS row_count
+FROM animals
+WHERE idempotency_key IS NOT NULL
+GROUP BY created_by, idempotency_key
+HAVING COUNT(*) > 1;
+```
+
+Observed result:
+
+`0 rows`
+
+This confirms that no duplicate animal rows exist for the same:
+
+`created_by + idempotency_key`
+
+---
+
+## Animal Code Sequence Replay Verification
+
+During hardening testing:
+
+`M&P-DOG-009`
+
+was created.
+
+The exact request was replayed using the same idempotency key.
+
+After the replay:
+
+```sql
+SELECT last_value
+FROM animal_dog_code_seq;
+```
+
+returned:
+
+`9`
+
+This confirmed that the normal idempotency pre-check returned the existing animal before generating another animal code.
+
+---
+
+## List Animals
+
+Verified:
+
+- search
+- filtering
+- sorting
+- pagination
+- archived records excluded
+
+---
+
+## Get Animal by ID
+
+Verified:
+
+- valid animal returned
+- invalid UUID rejected
+- archived animal hidden from normal lookup
+
+---
+
+## PATCH Animal
+
+Verified:
+
+- partial updates work
+- protected fields are not updated
+- business rules are checked using existing + new state
+- audit fields update correctly
+- empty PATCH is rejected
+
+---
+
+## Archive Animal
+
+Verified:
+
+- ADMIN can soft-archive an animal
+- row remains in PostgreSQL
+- archived record disappears from normal list/detail endpoints
+
+---
+
+# Development Issues and Improvements
+
+## Database and Application Life-Stage Mismatch
+
+The application originally supported:
+
+- `KITTEN`
+- `PUPPY`
+- `ADULT`
+- `OTHER`
+
+while the database used a different life-stage constraint.
+
+The mismatch caused PostgreSQL CHECK constraint failures.
+
+A migration updated the database constraint so the database and application rules matched.
+
+---
+
+## Animal Code Sequence Gap During Failed Insert
+
+A failed animal insert consumed a PostgreSQL sequence value.
+
+This resulted in a gap in generated animal codes.
+
+The behavior was accepted because PostgreSQL sequences are not designed to guarantee gapless numbering.
+
+---
+
+## Duplicate Animal Creation Risk
+
+Repeated Create Animal POST requests could create multiple animal profiles representing the same intended submission.
+
+Backend idempotency was added using:
+
+- `Idempotency-Key`
+- request hashing
+- database uniqueness
+- replay handling
+- conflict handling
+
+---
+
+## Unnecessary Sequence Consumption During Replay
+
+Initially, animal-code generation happened before the database detected a duplicate idempotency key.
+
+The service was improved by checking for an existing idempotency request before calling:
+
+`generateAnimalCode()`
+
+This prevents normal replays from consuming unnecessary sequence numbers.
+
+The database UNIQUE constraint remains as race-condition protection.
+
+---
+
+## Birth-Date Timezone Serialization
+
+PostgreSQL `DATE` values could be represented as JavaScript timestamps and appear as the previous UTC calendar date.
+
+Animal repository queries were changed to:
+
+`birth_date::text AS birth_date`
+
+to preserve the intended calendar date.
+
+---
+
+## Duplicate Validation Logic
+
+A duplicate `validateAnimalListQuery()` function existed inside the repository.
+
+The duplicate was removed.
+
+Validation now remains in:
+
+`animal.validation.js`
+
+while:
+
+`animal.repository.js`
+
+remains focused on PostgreSQL access.
+
+---
+
+# Current Animals Module Status
+
+The Animals backend module is complete for the current MVP scope.
+
+Implemented and tested:
+
+- Create animal ✅
+- Automatic species-based animal codes ✅
+- Separate CAT/DOG sequences ✅
+- Create request validation ✅
+- Request-body object validation ✅
+- Create Animal idempotency ✅
+- Idempotency request hashing ✅
+- Idempotency pre-check ✅
+- Duplicate POST protection ✅
+- Idempotency replay handling ✅
+- Idempotency conflict handling ✅
+- Database concurrency protection ✅
+- Sequence replay optimization ✅
+- List animals ✅
+- Search ✅
+- Filtering ✅
+- Sorting ✅
+- Pagination ✅
+- Get animal by ID ✅
+- Partial animal update ✅
+- Empty PATCH protection ✅
+- Species/life-stage business rules ✅
+- Final birth-date state validation ✅
+- Birth-date timezone-safe API formatting ✅
+- UUID validation ✅
+- Soft archive ✅
+- Archived-record filtering ✅
+- Audit fields ✅
+- Authentication ✅
+- Role-based access control ✅
+- Parameterized PostgreSQL queries ✅
+- snake_case to camelCase API mapping ✅
+
+The Animals module is considered complete for the current backend MVP and can now be followed by the next M & P Shelter backend module.
