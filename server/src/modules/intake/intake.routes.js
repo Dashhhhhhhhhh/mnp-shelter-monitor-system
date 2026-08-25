@@ -10,11 +10,9 @@ import {
 import { authenticate } from "../../middlewares/authenticate.js";
 import { authorizeRoles } from "../../middlewares/authorizeRoles.js";
 
-import { findIntakeById } from "./intake.repository.js";
-import { updateIntake } from "./intake.service.js";
-
-const animalIntakeRouter = express.Router({ mergeParams: true });
-const intakeRouter = express.Router();
+const animalIntakeRouter = express.Router({
+  mergeParams: true,
+});
 
 animalIntakeRouter.post(
   "/",
@@ -30,17 +28,18 @@ animalIntakeRouter.get(
   getAnimalIntakesController,
 );
 
-intakeRouter.get(
+animalIntakeRouter.get(
   "/:intakeId",
   authenticate,
   authorizeRoles("ADMIN", "VOLUNTEER", "CARETAKER"),
   getIntakeByIdController,
 );
 
-intakeRouter.patch(
+animalIntakeRouter.patch(
   "/:intakeId",
   authenticate,
   authorizeRoles("ADMIN", "VOLUNTEER"),
   updateIntakeController,
 );
-export { animalIntakeRouter, intakeRouter };
+
+export { animalIntakeRouter };

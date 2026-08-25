@@ -227,5 +227,5 @@ export {
   findIntakesByAnimalId,
   findIntakeById,
   updateIntakeRecord,
-  findIntakeByIdempotencyKey
+  findIntakeByIdempotencyKey,
 };

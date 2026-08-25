@@ -276,6 +276,16 @@ function validateIntakeId(intakeId) {
 }
 
 function validateUpdateIntakeInput(intakeData) {
+  if (
+    !intakeData ||
+    typeof intakeData !== "object" ||
+    Array.isArray(intakeData)
+  ) {
+    const error = new Error("Intake data must be an object");
+    error.statusCode = 400;
+    throw error;
+  }
+  
   const hasField = (field) =>
     Object.prototype.hasOwnProperty.call(intakeData, field);
 

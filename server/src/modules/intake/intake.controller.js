@@ -40,7 +40,10 @@ async function getAnimalIntakesController(req, res, next) {
 
 async function getIntakeByIdController(req, res, next) {
   try {
-    const intake = await getIntakeById(req.params.intakeId);
+    const intake = await getIntakeById(
+      req.params.animalId,
+      req.params.intakeId,
+    );
 
     return res.status(200).json({
       success: true,
@@ -54,6 +57,7 @@ async function getIntakeByIdController(req, res, next) {
 async function updateIntakeController(req, res, next) {
   try {
     const intake = await updateIntake(
+      req.params.animalId,
       req.params.intakeId,
       req.body,
       req.user.userId,

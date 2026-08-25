@@ -279,12 +279,13 @@ async function getAnimalIntakes(animalId) {
   }));
 }
 
-async function getIntakeById(intakeId) {
+async function getIntakeById(animalId,intakeId) {
+  const validAnimalId = validateAnimalId(animalId);
   const validIntakeId = validateIntakeId(intakeId);
 
   const intake = await findIntakeById(validIntakeId);
 
-  if (!intake) {
+  if (!intake || intake.animal_id !== validAnimalId) {
     const error = new Error("Intake not found");
     error.statusCode = 404;
     throw error;
@@ -310,17 +311,25 @@ async function getIntakeById(intakeId) {
   };
 }
 
-async function updateIntake(intakeId, intakeData, updatedBy) {
+async function updateIntake(animalId, intakeId, intakeData, updatedBy) {
+  const validAnimalId = validateAnimalId(animalId);
   const validIntakeId = validateIntakeId(intakeId);
 
-  const existingIntake = await findIntakeById(validIntakeId);
+  const animal = await findAnimalById(validAnimalId);
 
-  if (!existingIntake) {
-    const error = new Error("Intake not found");
+  if (!animal) {
+    const error = new Error("Animal not found");
     error.statusCode = 404;
     throw error;
   }
 
+  const existingIntake = await findIntakeById(validIntakeId);
+
+  if (!existingIntake || existingIntake.animal_id !== validAnimalId) {
+    const error = new Error("Intake not found");
+    error.statusCode = 404;
+    throw error;
+  }
   const updates = validateUpdateIntakeInput(intakeData);
 
   const finalIntakeSource =
