@@ -1,5 +1,5 @@
 import pool from "../../config/db.js";
-    
+
 async function getNextCageCodeNumber(speciesGroup) {
   const sequenceMap = {
     CAT: "cage_cat_code_seq",
@@ -102,8 +102,8 @@ async function findCages() {
   return result.rows;
 }
 
-async function findCageById(cageId) {
-  const result = await pool.query(
+async function findCageById(cageId, db = pool) {
+  const result = await db.query(
     `SELECT
       cage_id,
       cage_code,

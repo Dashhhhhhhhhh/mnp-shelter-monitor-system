@@ -222,9 +222,8 @@ async function findAnimals({
     totalItems,
   };
 }
-
-async function findAnimalById(animalId) {
-  const result = await pool.query(
+async function findAnimalById(animalId, db = pool) {
+  const result = await db.query(
     `SELECT
       a.animal_id,
       a.animal_code,
