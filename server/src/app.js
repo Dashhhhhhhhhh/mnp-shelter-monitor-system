@@ -8,11 +8,12 @@ import animalRoutes from "./modules/animals/animal.routes.js";
 import { animalIntakeRouter } from "./modules/intake/intake.routes.js";
 import cageRouter from "./modules/cages/cage.routes.js";
 import cageAssignmentRouter from "./modules/cage_assignments/cageAssignment.routes.js";
+import careRecordRouter from "./modules/care_record/careRecord.routes.js";
 
 const app = express();
 
 app.use(express.json());
-app.use(cookieParser());  
+app.use(cookieParser());
 
 app.use("/api/auth", authRoutes);
 
@@ -25,6 +26,8 @@ app.use("/api/animals/:animalId/intakes", animalIntakeRouter);
 app.use("/api/cages", cageRouter);
 
 app.use("/api", cageAssignmentRouter);
+
+app.use("/api", careRecordRouter);
 
 app.get("/", (req, res) => {
   res.json({ message: "M & P Shelter Monitoring API is running!" });

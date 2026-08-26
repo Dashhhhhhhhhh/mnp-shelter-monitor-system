@@ -1,0 +1,6 @@
+           indexname            |                                                                                                                                         indexdef                                                                                                                                         
+--------------------------------+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ care_records_pkey              | CREATE UNIQUE INDEX care_records_pkey ON public.care_records USING btree (care_record_id)
+ uq_care_records_scheduled_task | CREATE UNIQUE INDEX uq_care_records_scheduled_task ON public.care_records USING btree (cage_id, care_date, care_period, care_type, COALESCE(cleaning_type, ''::character varying)) WHERE ((care_period)::text = ANY ((ARRAY['AM'::character varying, 'PM'::character varying])::text[]))
+(2 rows)
+
