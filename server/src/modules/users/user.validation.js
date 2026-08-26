@@ -24,10 +24,9 @@ function validateCreateUserInput(userData) {
     error.statusCode = 400;
     throw error;
   }
-
   const middleInitial =
     typeof userData.middleInitial === "string"
-      ? userData.middleInitial.trim()
+      ? userData.middleInitial.trim() || null
       : null;
 
   const lastName =
@@ -52,9 +51,10 @@ function validateCreateUserInput(userData) {
 
   const password = userData.password;
 
-  const contactNumber = userData.contactNumber
-    ? userData.contactNumber.trim()
-    : null;
+  const contactNumber =
+    typeof userData.contactNumber === "string"
+      ? userData.contactNumber.trim() || null
+      : null;
 
   return {
     role,
