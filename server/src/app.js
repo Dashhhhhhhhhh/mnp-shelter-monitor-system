@@ -9,6 +9,7 @@ import { animalIntakeRouter } from "./modules/intake/intake.routes.js";
 import cageRouter from "./modules/cages/cage.routes.js";
 import cageAssignmentRouter from "./modules/cage_assignments/cageAssignment.routes.js";
 import careRecordRouter from "./modules/care_record/careRecord.routes.js";
+import observationRouter from "./modules/observations/observation.routes.js";
 
 const app = express();
 
@@ -28,6 +29,8 @@ app.use("/api/cages", cageRouter);
 app.use("/api", cageAssignmentRouter);
 
 app.use("/api", careRecordRouter);
+
+app.use("/api", observationRouter);
 
 app.get("/", (req, res) => {
   res.json({ message: "M & P Shelter Monitoring API is running!" });
