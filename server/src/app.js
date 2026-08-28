@@ -22,6 +22,8 @@ import medicalRouter from "./modules/medical/medical.routes.js";
 
 import medicationRouter from "./modules/medication/medication.routes.js";
 
+import preventiveCareRouter from "./modules/preventive_care/preventiveCare.routes.js";
+
 const app = express();
 
 app.use(express.json());
@@ -46,6 +48,8 @@ app.use("/api", observationRouter);
 app.use("/api", medicalRouter);
 
 app.use("/api", medicationRouter);
+
+app.use("/api", preventiveCareRouter);
 
 app.get("/", (req, res) => {
   res.json({ message: "M & P Shelter Monitoring API is running!" });
