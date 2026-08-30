@@ -1,0 +1,2 @@
+ALTER TABLE inventory_items
+ADD COLUMN is_active BOOLEAN NOT NULL DEFAULT true;
