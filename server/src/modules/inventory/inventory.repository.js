@@ -454,6 +454,7 @@ async function getCurrentStock(inventoryItemId, db = pool) {
 async function insertStockRecord(data, db = pool) {
   const {
     inventoryItemId,
+    donationItemId,
     recordType,
     quantity,
     adjustmentDirection,
@@ -464,34 +465,26 @@ async function insertStockRecord(data, db = pool) {
     idempotencyKey,
     idempotencyRequestHash,
   } = data;
-
   const result = await db.query(
     `
-      INSERT INTO inventory_stock_records (
-        inventory_item_id,
-        record_type,
-        quantity,
-        adjustment_direction,
-        estimated_level,
-        stock_status,
-        notes,
-        recorded_by,
-        idempotency_key,
-        idempotency_request_hash
-      )
-      VALUES (
-        $1,
-        $2,
-        $3,
-        $4,
-        $5,
-        $6,
-        $7,
-        $8,
-        $9,
-        $10
-      )
-      RETURNING
+    INSERT INTO inventory_stock_records (
+      inventory_item_id,
+      donation_item_id,
+      record_type,
+      quantity,
+      adjustment_direction,
+      estimated_level,
+      stock_status,
+      notes,
+      recorded_by,
+      idempotency_key,
+      idempotency_request_hash
+    )
+    VALUES (
+      $1, $2, $3, $4, $5, $6,
+      $7, $8, $9, $10, $11
+    )
+        RETURNING
         stock_record_id,
         inventory_item_id,
         record_type,
@@ -507,6 +500,7 @@ async function insertStockRecord(data, db = pool) {
     `,
     [
       inventoryItemId,
+      donationItemId,
       recordType,
       quantity,
       adjustmentDirection,
@@ -546,6 +540,23 @@ async function findStockRecordsByInventoryItemId(inventoryItemId, db = pool) {
   return result.rows;
 }
 
+async function hasReceivedStockForDonation(donationId, db = pool) {
+  const result = await db.query(
+    `
+    SELECT EXISTS (
+      SELECT 1
+      FROM donation_items di
+      JOIN inventory_stock_records isr
+        ON isr.donation_item_id = di.donation_item_id
+      WHERE di.donation_id = $1
+    ) AS has_received_stock
+    `,
+    [donationId],
+  );
+
+  return result.rows[0].has_received_stock;
+}
+
 export {
   findInventoryItemById,
   findInventoryItemByIdForUpdate,
@@ -558,5 +569,6 @@ export {
   getCurrentStock,
   insertStockRecord,
   findStockRecordsByInventoryItemId,
-  findStockRecordByIdempotencyKey
+  findStockRecordByIdempotencyKey,
+  hasReceivedStockForDonation,
 };

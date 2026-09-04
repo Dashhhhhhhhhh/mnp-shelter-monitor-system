@@ -26,6 +26,8 @@ import preventiveCareRouter from "./modules/preventive_care/preventiveCare.route
 
 import inventoryRouter from "./modules/inventory/inventory.routes.js";
 
+import donationRouter from "./modules/finance/routes/donation.routes.js";
+
 const app = express();
 
 app.use(express.json());
@@ -54,6 +56,8 @@ app.use("/api", medicationRouter);
 app.use("/api", preventiveCareRouter);
 
 app.use("/api", inventoryRouter);
+
+app.use("/api/donations", donationRouter);
 
 app.get("/", (req, res) => {
   res.json({ message: "M & P Shelter Monitoring API is running!" });

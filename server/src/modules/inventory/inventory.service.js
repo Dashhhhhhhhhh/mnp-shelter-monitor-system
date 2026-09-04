@@ -638,7 +638,6 @@ async function getInventoryItemStockRecordsService(inventoryItemId) {
 
   const stockRecords =
     await findStockRecordsByInventoryItemId(validInventoryItemId);
-
   return stockRecords.map(mapStockRecord);
 }
 
