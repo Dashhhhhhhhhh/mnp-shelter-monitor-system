@@ -215,6 +215,64 @@ function validateVoidDonationInput(data) {
   };
 }
 
+function validateDonationItems(donationItems) {
+  if (!Array.isArray(donationItems) || donationItems.length === 0) {
+    const error = new Error(
+      "IN_KIND donation must contain at least one donation item",
+    );
+    error.statusCode = 400;
+    throw error;
+  }
+
+  return donationItems.map((item, index) => {
+    if (!item || typeof item !== "object" || Array.isArray(item)) {
+      const error = new Error(`Donation item ${index + 1} must be an object`);
+      error.statusCode = 400;
+      throw error;
+    }
+
+    const inventoryItemId = validateOptionalUuid(
+      item.inventoryItemId,
+      `donation item ${index + 1} inventory item ID`,
+    );
+
+    const itemName = validateRequiredText(
+      item.itemName,
+      `Donation item ${index + 1} name`,
+      150,
+    );
+
+    const quantity = Number(item.quantity);
+
+    if (!Number.isFinite(quantity) || quantity <= 0) {
+      const error = new Error(
+        `Donation item ${index + 1} quantity must be greater than zero`,
+      );
+      error.statusCode = 400;
+      throw error;
+    }
+
+    const unit = validateRequiredText(
+      item.unit,
+      `Donation item ${index + 1} unit`,
+      30,
+    ).toUpperCase();
+
+    const notes = validateOptionalText(
+      item.notes,
+      `Donation item ${index + 1} notes`,
+    );
+
+    return {
+      inventoryItemId,
+      itemName,
+      quantity,
+      unit,
+      notes,
+    };
+  });
+}
+
 function validateCreateDonationInput(data) {
   if (!data || typeof data !== "object" || Array.isArray(data)) {
     const error = new Error("Donation data must be an object");
@@ -314,6 +372,8 @@ function validateCreateDonationInput(data) {
       }
     }
 
+    rejectProvidedField(data.donationItems, "Donation items", donationType);
+
     return {
       donationType,
       donatedAt,
@@ -335,6 +395,7 @@ function validateCreateDonationInput(data) {
   }
 
   if (donationType === "IN_KIND") {
+    const donationItems = validateDonationItems(data.donationItems);
     let monetaryAmount = null;
 
     if (data.monetaryAmount !== undefined && data.monetaryAmount !== null) {
@@ -381,6 +442,7 @@ function validateCreateDonationInput(data) {
       restrictedExpenseId: null,
       notes,
       receivedBy,
+      donationItems,
     };
   }
 
@@ -437,6 +499,8 @@ function validateCreateDonationInput(data) {
     );
 
     rejectProvidedField(data.receivedBy, "Received by", donationType);
+
+    rejectProvidedField(data.donationItems, "Donation items", donationType);
 
     return {
       donationType,
@@ -593,6 +657,134 @@ function validateCreateRestrictionChangeInput(data) {
     changedAt,
   };
 }
+
+function validateDonationListQuery(query) {
+  if (!query || typeof query !== "object" || Array.isArray(query)) {
+    const error = new Error("Donation query must be an object");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  // Pagination
+  const page = query.page === undefined ? 1 : Number(query.page);
+  const limit = query.limit === undefined ? 20 : Number(query.limit);
+
+  if (!Number.isInteger(page) || page < 1) {
+    const error = new Error("Page must be a positive integer");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  if (!Number.isInteger(limit) || limit < 1 || limit > 100) {
+    const error = new Error("Limit must be an integer between 1 and 100");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  // Sorting
+  const allowedSortFields = [
+    "donatedAt",
+    "monetaryAmount",
+    "createdAt",
+    "donorName",
+  ];
+
+  const sortBy = query.sortBy ?? "donatedAt";
+
+  if (!allowedSortFields.includes(sortBy)) {
+    const error = new Error("Invalid donation sort field");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  const sortOrder =
+    query.sortOrder === undefined
+      ? "DESC"
+      : String(query.sortOrder).trim().toUpperCase();
+
+  if (!["ASC", "DESC"].includes(sortOrder)) {
+    const error = new Error("Sort order must be ASC or DESC");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  // Filters
+  const donationType =
+    query.donationType === undefined
+      ? null
+      : validateDonationType(query.donationType);
+
+  const paymentMethod =
+    query.paymentMethod === undefined
+      ? null
+      : validatePaymentMethod(query.paymentMethod);
+
+  const fundRestriction =
+    query.fundRestriction === undefined
+      ? null
+      : validateFundRestriction(query.fundRestriction);
+
+  const restrictionCategory =
+    query.restrictionCategory === undefined
+      ? null
+      : validateRestrictionCategory(query.restrictionCategory);
+
+  const dateFrom =
+    query.dateFrom === undefined
+      ? null
+      : validateDateTime(query.dateFrom, "Date from");
+
+  const dateTo =
+    query.dateTo === undefined
+      ? null
+      : validateDateTime(query.dateTo, "Date to");
+
+  if (dateFrom && dateTo && dateFrom > dateTo) {
+    const error = new Error("Date from cannot be after date to");
+    error.statusCode = 400;
+    throw error;
+  }
+  6;
+
+  let isVoided = null;
+
+  if (query.isVoided !== undefined) {
+    if (query.isVoided === "true") {
+      isVoided = true;
+    } else if (query.isVoided === "false") {
+      isVoided = false;
+    } else {
+      const error = new Error("isVoided must be true or false");
+      error.statusCode = 400;
+      throw error;
+    }
+  }
+
+  const search =
+    query.search === undefined
+      ? null
+      : validateOptionalText(query.search, "Search", 150);
+
+  return {
+    page,
+    limit,
+    offset: (page - 1) * limit,
+
+    sortBy,
+    sortOrder,
+
+    donationType,
+    paymentMethod,
+    fundRestriction,
+    restrictionCategory,
+    isVoided,
+    search,
+
+    dateFrom,
+    dateTo,
+  };
+}
+
 export {
   validateUuid,
   validateVoidDonationInput,
@@ -601,4 +793,5 @@ export {
   validateDateTime,
   validateRequiredText,
   validateCreateRestrictionChangeInput,
+  validateDonationListQuery,
 };

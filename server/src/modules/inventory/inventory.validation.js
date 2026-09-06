@@ -412,6 +412,19 @@ function validateCreateStockRecordInput(data) {
 
   const recordType = validateStockRecordType(data.recordType);
 
+  const donationItemId =
+    data.donationItemId === undefined || data.donationItemId === null
+      ? null
+      : validateUuid(data.donationItemId, "donation item ID");
+
+  if (donationItemId !== null && recordType !== "RECEIVED") {
+    const error = new Error(
+      "Donation item ID is only allowed for RECEIVED stock records",
+    );
+    error.statusCode = 400;
+    throw error;
+  }
+
   const notes = validateOptionalText(data.notes, "Notes");
 
   if (recordType === "STOCK_CHECK") {
@@ -452,6 +465,7 @@ function validateCreateStockRecordInput(data) {
 
     return {
       recordType,
+      donationItemId,
       quantity: null,
       adjustmentDirection: null,
       estimatedLevel,
@@ -491,6 +505,7 @@ function validateCreateStockRecordInput(data) {
 
     return {
       recordType,
+      donationItemId,
       quantity,
       adjustmentDirection,
       estimatedLevel: null,
@@ -512,6 +527,7 @@ function validateCreateStockRecordInput(data) {
 
   return {
     recordType,
+    donationItemId,
     quantity,
     adjustmentDirection: null,
     estimatedLevel: null,

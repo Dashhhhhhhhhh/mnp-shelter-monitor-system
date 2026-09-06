@@ -29,11 +29,11 @@ async function createDonationController(req, res, next) {
 
 async function getDonationsController(req, res, next) {
   try {
-    const donations = await getDonationsService();
+    const result = await getDonationsService(req.query);
 
     res.status(200).json({
       success: true,
-      donations,
+      ...result,
     });
   } catch (error) {
     next(error);
@@ -46,7 +46,7 @@ async function getDonationByIdController(req, res, next) {
 
     return res.status(200).json({
       success: true,
-      donation,
+      ...donation,
     });
   } catch (error) {
     next(error);

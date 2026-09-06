@@ -400,37 +400,203 @@ async function getRestrictionChangesByDonationId(donationId, db = pool) {
   return result.rows;
 }
 
-async function getDonations(db = pool) {
+async function getDonations(filters, db = pool) {
+  const {
+    limit,
+    offset,
+    sortBy,
+    sortOrder,
+    donationType,
+    paymentMethod,
+    fundRestriction,
+    restrictionCategory,
+    isVoided,
+    search,
+    dateFrom,
+    dateTo,
+  } = filters;
+
+  const conditions = [];
+  const values = [];
+
+  function addCondition(condition, value) {
+    values.push(value);
+    conditions.push(condition.replace("?", `$${values.length}`));
+  }
+
+  if (donationType !== null) {
+    addCondition("donation_type = ?", donationType);
+  }
+
+  if (paymentMethod !== null) {
+    addCondition("payment_method = ?", paymentMethod);
+  }
+
+  if (fundRestriction !== null) {
+    addCondition("fund_restriction = ?", fundRestriction);
+  }
+
+  if (restrictionCategory !== null) {
+    addCondition("restriction_category = ?", restrictionCategory);
+  }
+
+  if (isVoided === true) {
+    conditions.push("voided_at IS NOT NULL");
+  }
+
+  if (isVoided === false) {
+    conditions.push("voided_at IS NULL");
+  }
+
+  if (search !== null) {
+    addCondition("donor_name ILIKE '%' || ? || '%'", search);
+  }
+
+  if (dateFrom !== null) {
+    addCondition("donated_at >= ?", dateFrom);
+  }
+
+  if (dateTo !== null) {
+    addCondition("donated_at <= ?", dateTo);
+  }
+
+  const whereClause =
+    conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "";
+
+  const sortColumns = {
+    donatedAt: "donated_at",
+    monetaryAmount: "monetary_amount",
+    createdAt: "created_at",
+    donorName: "donor_name",
+  };
+
+  const sortColumn = sortColumns[sortBy];
+
+  const countResult = await db.query(
+    `
+      SELECT COUNT(*)::int AS total
+      FROM donations
+      ${whereClause}
+    `,
+    values,
+  );
+
+  const queryValues = [...values, limit, offset];
+
+  const limitPlaceholder = `$${values.length + 1}`;
+  const offsetPlaceholder = `$${values.length + 2}`;
+
   const result = await db.query(
     `
-    SELECT
-      donation_id,
-      donation_type,
-      donated_at,
-      monetary_amount,
-      payment_method,
-      payment_provider,
-      reference_number,
-      donor_user_id,
-      donor_name,
-      donor_contact,
-      is_anonymous,
-      purpose,
-      fund_restriction,
-      restriction_category,
-      restricted_expense_id,
-      notes,
-      received_by,
-      void_reason,
-      voided_by,
-      voided_at,
-      created_by,
-      updated_by,
-      created_at,
-      updated_at
-    FROM donations
-    ORDER BY donated_at DESC
+      SELECT
+        donation_id,
+        donation_type,
+        donated_at,
+        monetary_amount,
+        payment_method,
+        payment_provider,
+        reference_number,
+        donor_user_id,
+        donor_name,
+        donor_contact,
+        is_anonymous,
+        purpose,
+        fund_restriction,
+        restriction_category,
+        restricted_expense_id,
+        notes,
+        received_by,
+        void_reason,
+        voided_by,
+        voided_at,
+        created_by,
+        updated_by,
+        created_at,
+        updated_at
+      FROM donations
+      ${whereClause}
+      ORDER BY ${sortColumn} ${sortOrder}
+      LIMIT ${limitPlaceholder}
+      OFFSET ${offsetPlaceholder}
     `,
+    queryValues,
+  );
+
+  return {
+    donations: result.rows,
+    total: countResult.rows[0].total,
+  };
+}
+
+async function findDonationItemByIdForUpdate(donationItemId, db = pool) {
+  const result = await db.query(
+    `
+      SELECT
+        di.donation_item_id,
+        di.donation_id,
+        di.inventory_item_id,
+        di.quantity::text AS donated_quantity,
+        di.unit AS donated_unit,
+        d.donation_type,
+        d.voided_at
+      FROM donation_items di
+      JOIN donations d
+        ON d.donation_id = di.donation_id
+      WHERE di.donation_item_id = $1
+      FOR UPDATE OF di, d
+    `,
+    [donationItemId],
+  );
+
+  return result.rows[0] || null;
+}
+
+async function createDonationItem(
+  { donation_id, inventory_item_id, item_name, quantity, unit, notes },
+  db = pool,
+) {
+  const result = await db.query(
+    `
+      INSERT INTO donation_items (
+        donation_id,
+        inventory_item_id,
+        item_name,
+        quantity,
+        unit,
+        notes
+      )
+      VALUES ($1, $2, $3, $4, $5, $6)
+      RETURNING
+        donation_item_id,
+        donation_id,
+        inventory_item_id,
+        item_name,
+        quantity::text AS quantity,
+        unit,
+        notes
+    `,
+    [donation_id, inventory_item_id, item_name, quantity, unit, notes],
+  );
+
+  return result.rows[0];
+}
+
+async function getDonationItemsByDonationId(donationId, db = pool) {
+  const result = await db.query(
+    `
+      SELECT
+        donation_item_id,
+        donation_id,
+        inventory_item_id,
+        item_name,
+        quantity::text AS quantity,
+        unit,
+        notes
+      FROM donation_items
+      WHERE donation_id = $1
+      ORDER BY donation_item_id
+    `,
+    [donationId],
   );
 
   return result.rows;
@@ -446,4 +612,7 @@ export {
   findRestrictionChangeByIdempotencyKey,
   getRestrictionChangesByDonationId,
   getDonations,
+  findDonationItemByIdForUpdate,
+  createDonationItem,
+  getDonationItemsByDonationId,
 };

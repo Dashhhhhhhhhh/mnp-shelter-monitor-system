@@ -487,6 +487,7 @@ async function insertStockRecord(data, db = pool) {
         RETURNING
         stock_record_id,
         inventory_item_id,
+        donation_item_id,
         record_type,
         quantity::text AS quantity,
         adjustment_direction,
@@ -557,6 +558,20 @@ async function hasReceivedStockForDonation(donationId, db = pool) {
   return result.rows[0].has_received_stock;
 }
 
+async function getReceivedQuantityByDonationItemId(donationItemId, db = pool) {
+  const result = await db.query(
+    `
+      SELECT
+        COALESCE(SUM(quantity), 0)::text AS received_quantity
+      FROM inventory_stock_records
+      WHERE donation_item_id = $1
+    `,
+    [donationItemId],
+  );
+
+  return result.rows[0].received_quantity;
+}
+
 export {
   findInventoryItemById,
   findInventoryItemByIdForUpdate,
@@ -571,4 +586,5 @@ export {
   findStockRecordsByInventoryItemId,
   findStockRecordByIdempotencyKey,
   hasReceivedStockForDonation,
+  getReceivedQuantityByDonationItemId,
 };

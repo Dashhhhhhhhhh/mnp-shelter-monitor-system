@@ -14,7 +14,10 @@ import {
   insertStockRecord,
   findStockRecordsByInventoryItemId,
   findStockRecordByIdempotencyKey,
+  getReceivedQuantityByDonationItemId,
 } from "./inventory.repository.js";
+
+import { findDonationItemByIdForUpdate } from "./../finance/repositories/donation.repository.js";
 
 import {
   validateInventoryItemId,
@@ -85,6 +88,8 @@ function mapStockRecord(record) {
   return {
     stockRecordId: record.stock_record_id,
     inventoryItemId: record.inventory_item_id,
+    donationItemId: record.donation_item_id,
+
     recordType: record.record_type,
 
     quantity: toNullableNumber(record.quantity),
@@ -437,6 +442,7 @@ async function createStockRecordService(
 
   const idempotencyRequestHash = createStockRecordRequestHash({
     inventoryItemId: validInventoryItemId,
+    donationItemId: validated.donationItemId,
     recordType: validated.recordType,
     quantity: validated.quantity,
     adjustmentDirection: validated.adjustmentDirection,
@@ -534,6 +540,70 @@ async function createStockRecordService(
       const error = new Error("Inventory item is inactive");
       error.statusCode = 409;
       throw error;
+    }
+
+    if (validated.donationItemId !== null) {
+      const donationItem = await findDonationItemByIdForUpdate(
+        validated.donationItemId,
+        client,
+      );
+
+      if (!donationItem) {
+        const error = new Error("Donation item not found");
+        error.statusCode = 404;
+        throw error;
+      }
+
+      if (donationItem.donation_type !== "IN_KIND") {
+        const error = new Error(
+          "Donation item must belong to an IN_KIND donation",
+        );
+        error.statusCode = 409;
+        throw error;
+      }
+
+      if (donationItem.voided_at !== null) {
+        const error = new Error(
+          "Stock cannot be received from a voided donation",
+        );
+        error.statusCode = 409;
+        throw error;
+      }
+
+      if (donationItem.inventory_item_id !== validInventoryItemId) {
+        const error = new Error(
+          "Donation item does not belong to this inventory item",
+        );
+        error.statusCode = 409;
+        throw error;
+      }
+
+      if (donationItem.donated_unit !== inventoryItem.unit) {
+        const error = new Error(
+          "Donation item unit does not match the inventory item unit",
+        );
+        error.statusCode = 409;
+        throw error;
+      }
+
+      const receivedQuantity = Number(
+        await getReceivedQuantityByDonationItemId(
+          validated.donationItemId,
+          client,
+        ),
+      );
+
+      const donatedQuantity = Number(donationItem.donated_quantity);
+
+      const remainingQuantity = donatedQuantity - receivedQuantity;
+
+      if (validated.quantity > remainingQuantity) {
+        const error = new Error(
+          "Received quantity exceeds the remaining donated quantity",
+        );
+        error.statusCode = 409;
+        throw error;
+      }
     }
 
     if (validated.quantity !== null) {

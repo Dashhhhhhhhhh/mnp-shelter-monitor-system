@@ -11,6 +11,8 @@ import {
   createRestrictionChange,
   findRestrictionChangeByIdempotencyKey,
   getRestrictionChangesByDonationId,
+  createDonationItem,
+  getDonationItemsByDonationId,
 } from "../repositories/donation.repository.js";
 
 import {
@@ -29,6 +31,7 @@ import {
   validateRequiredText,
   validateVoidDonationInput,
   validateCreateRestrictionChangeInput,
+  validateDonationListQuery,
 } from "../validations/donation.validation.js";
 
 function validateIdempotencyKey(idempotencyKey) {
@@ -223,6 +226,23 @@ function mapRestrictionChange(change) {
   };
 }
 
+function mapDonationItem(item) {
+  if (!item) return null;
+
+  return {
+    donationItemId: item.donation_item_id,
+    donationId: item.donation_id,
+    inventoryItemId: item.inventory_item_id,
+    itemName: item.item_name,
+    quantity:
+      item.quantity === null || item.quantity === undefined
+        ? null
+        : Number(item.quantity),
+    unit: item.unit,
+    notes: item.notes,
+  };
+}
+
 async function createDonationService(data, createdBy, idempotencyKey) {
   const validIdempotencyKey = validateIdempotencyKey(idempotencyKey);
 
@@ -253,6 +273,8 @@ async function createDonationService(data, createdBy, idempotencyKey) {
     restrictedExpenseId: validated.restrictedExpenseId,
     notes: validated.notes,
     receivedBy: validated.receivedBy,
+
+    donationItems: validated.donationItems ?? null,
   });
 
   const client = await pool.connect();
@@ -277,10 +299,22 @@ async function createDonationService(data, createdBy, idempotencyKey) {
         throw error;
       }
 
+      let existingDonationItems = [];
+
+      if (existingDonation.donation_type === "IN_KIND") {
+        existingDonationItems = await getDonationItemsByDonationId(
+          existingDonation.donation_id,
+          client,
+        );
+      }
+
       await client.query("COMMIT");
 
       return {
-        donation: mapDonation(existingDonation),
+        donation: {
+          ...mapDonation(existingDonation),
+          donationItems: existingDonationItems.map(mapDonationItem),
+        },
         isReplay: true,
       };
     }
@@ -295,10 +329,33 @@ async function createDonationService(data, createdBy, idempotencyKey) {
       client,
     );
 
+    const createdDonationItems = [];
+
+    if (validated.donationType === "IN_KIND") {
+      for (const item of validated.donationItems) {
+        const createdItem = await createDonationItem(
+          {
+            donation_id: createdDonation.donation_id,
+            inventory_item_id: item.inventoryItemId,
+            item_name: item.itemName,
+            quantity: item.quantity,
+            unit: item.unit,
+            notes: item.notes,
+          },
+          client,
+        );
+
+        createdDonationItems.push(createdItem);
+      }
+    }
+
     await client.query("COMMIT");
 
     return {
-      donation: mapDonation(createdDonation),
+      donation: {
+        ...mapDonation(createdDonation),
+        donationItems: createdDonationItems.map(mapDonationItem),
+      },
       isReplay: false,
     };
   } catch (error) {
@@ -325,10 +382,30 @@ async function createDonationService(data, createdBy, idempotencyKey) {
         throw conflictError;
       }
 
+      let concurrentDonationItems = [];
+
+      if (concurrentExistingDonation.donation_type === "IN_KIND") {
+        concurrentDonationItems = await getDonationItemsByDonationId(
+          concurrentExistingDonation.donation_id,
+        );
+      }
+
       return {
-        donation: mapDonation(concurrentExistingDonation),
+        donation: {
+          ...mapDonation(concurrentExistingDonation),
+          donationItems: concurrentDonationItems.map(mapDonationItem),
+        },
         isReplay: true,
       };
+    }
+
+    if (
+      error.code === "23503" &&
+      error.constraint === "fk_donation_items_inventory_item"
+    ) {
+      const notFoundError = new Error("Inventory item not found");
+      notFoundError.statusCode = 404;
+      throw notFoundError;
     }
 
     throw error;
@@ -337,10 +414,21 @@ async function createDonationService(data, createdBy, idempotencyKey) {
   }
 }
 
-async function getDonationsService() {
-  const donations = await getDonations();
+async function getDonationsService(query) {
+  const validated = validateDonationListQuery(query);
+  const { donations, total } = await getDonations(validated);
 
-  return donations.map(mapDonation);
+  const totalPages = Math.ceil(total / validated.limit);
+
+  return {
+    donations: donations.map(mapDonation),
+    pagination: {
+      page: validated.page,
+      limit: validated.limit,
+      total,
+      totalPages,
+    },
+  };
 }
 
 async function getDonationByIdService(donationId) {
@@ -354,9 +442,17 @@ async function getDonationByIdService(donationId) {
     throw error;
   }
 
-  return mapDonation(donation);
-}
+  let donationItems = [];
 
+  if (donation.donation_type === "IN_KIND") {
+    donationItems = await getDonationItemsByDonationId(validDonationId);
+  }
+
+  return {
+    ...mapDonation(donation),
+    donationItems: donationItems.map(mapDonationItem),
+  };
+}
 async function voidDonationService(donationId, data, voidedBy) {
   const validDonationId = validateUuid(donationId, "donation ID");
 
