@@ -5,7 +5,7 @@ import {
   voidDonationService,
   createRestrictionChangeService,
   getRestrictionChangesService,
-} from "../services/donation.services.js";
+} from "../services/donation.service.js";
 
 async function createDonationController(req, res, next) {
   try {

@@ -1,5 +1,6 @@
+import crypto from "node:crypto";
+
 import pool from "../../../config/db.js";
-import crypto from "crypto";
 
 import {
   createDonation,
@@ -25,27 +26,22 @@ import { hasFundingAllocationForDirectPaymentDonation } from "../repositories/ex
 import { hasReceivedStockForDonation } from "../../inventory/inventory.repository.js";
 
 import {
-  validateCreateDonationInput,
-  validateDateTime,
+  validateEnum,
+  validateMoneyAmount,
   validateUuid,
+  validateOptionalUuid,
+  validateOptionalText,
+  validateIdempotencyKey,
+  validateDateTime,
+} from "../validations/finance.validation.utils.js";
+
+import {
+  validateCreateDonationInput,
   validateRequiredText,
   validateVoidDonationInput,
   validateCreateRestrictionChangeInput,
   validateDonationListQuery,
 } from "../validations/donation.validation.js";
-
-function validateIdempotencyKey(idempotencyKey) {
-  const uuidPattern =
-    /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-
-  if (typeof idempotencyKey !== "string" || !uuidPattern.test(idempotencyKey)) {
-    const error = new Error("A valid Idempotency-Key header is required");
-    error.statusCode = 400;
-    throw error;
-  }
-
-  return idempotencyKey;
-}
 
 function createRestrictionChangeRequestHash(data) {
   return crypto.createHash("sha256").update(JSON.stringify(data)).digest("hex");
