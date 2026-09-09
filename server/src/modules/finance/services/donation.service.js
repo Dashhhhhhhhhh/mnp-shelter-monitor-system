@@ -1,5 +1,3 @@
-import crypto from "node:crypto";
-
 import pool from "../../../config/db.js";
 
 import {
@@ -43,13 +41,7 @@ import {
   validateDonationListQuery,
 } from "../validations/donation.validation.js";
 
-function createRestrictionChangeRequestHash(data) {
-  return crypto.createHash("sha256").update(JSON.stringify(data)).digest("hex");
-}
-
-function createDonationRequestHash(data) {
-  return crypto.createHash("sha256").update(JSON.stringify(data)).digest("hex");
-}
+import { createRequestHash } from "../utils/finance.utils.js";
 
 function sameRestrictionBucket(
   typeA,
@@ -252,7 +244,7 @@ async function createDonationService(data, createdBy, idempotencyKey) {
     throw error;
   }
 
-  const idempotencyRequestHash = createDonationRequestHash({
+  const idempotencyRequestHash = createRequestHash({
     donationType: validated.donationType,
     donatedAt: validated.donatedAt,
     monetaryAmount: validated.monetaryAmount,
@@ -554,7 +546,7 @@ async function createRestrictionChangeService(
 
   const validated = validateCreateRestrictionChangeInput(data);
 
-  const idempotencyRequestHash = createRestrictionChangeRequestHash({
+  const idempotencyRequestHash = createRequestHash({
     donationId: validDonationId,
     changeAmount: validated.changeAmount,
 

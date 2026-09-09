@@ -1,6 +1,6 @@
 import pool from "../../../config/db.js";
 
-import crypto, { createHash } from "node:crypto";
+import { createRequestHash } from "../utils/finance.utils.js";
 
 import {
   validateCreateExpenseInput,
@@ -74,19 +74,12 @@ function mapExpenseAmountCorrection(correction) {
   };
 }
 
-function createExpenseRequestHash(expense) {
-  return crypto
-    .createHash("sha256")
-    .update(JSON.stringify(expense))
-    .digest("hex");
-}
-
 async function createExpenseService(data, createdBy, idempotencyKey) {
   const validIdempotencyKey = validateIdempotencyKey(idempotencyKey);
 
   const validated = validateCreateExpenseInput(data);
 
-  const idempotencyRequestHash = createExpenseRequestHash({
+  const idempotencyRequestHash = createRequestHash({
     expenseDate: validated.expenseDate,
     category: validated.category,
     description: validated.description,
@@ -295,7 +288,7 @@ async function createExpenseAmountCorrectionService(
 
   const validated = validateExpenseAmountCorrectionInput(data);
 
-  const idempotencyRequestHash = createExpenseRequestHash({
+  const idempotencyRequestHash = createRequestHash({
     expenseId: validExpenseId,
     newAmount: validated.newAmount,
     correctionReason: validated.correctionReason,

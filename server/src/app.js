@@ -30,6 +30,8 @@ import donationRouter from "./modules/finance/routes/donation.routes.js";
 
 import expenseRoutes from "./modules/finance/routes/expense.routes.js";
 
+import expenseFundingRoutes from "./modules/finance/routes/expenseFunding.routes.js";
+
 const app = express();
 
 app.use(express.json());
@@ -63,6 +65,8 @@ app.use("/api/donations", donationRouter);
 
 app.use("/api/expenses", expenseRoutes);
 
+app.use("/api/expenses", expenseFundingRoutes);
+
 app.get("/", (req, res) => {
   res.json({ message: "M & P Shelter Monitoring API is running!" });
 });
@@ -70,4 +74,3 @@ app.get("/", (req, res) => {
 app.use(errorHandler);
 
 export default app;
-  
