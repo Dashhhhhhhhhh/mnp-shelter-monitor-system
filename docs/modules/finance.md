@@ -1,14 +1,12 @@
 M & P Shelter Monitoring System
 
-Finance Module Reviewer & Refresher
+Finance Module Technical Documentation
 
-Purpose: a practical reviewer for understanding, refreshing, and explaining the Finance module in interviews or while maintaining the project.
+1. Purpose
 
-1. Big Picture
+The Finance module records, controls, and audits financial activity for the M & P Shelter Monitoring System.
 
-The Finance module is not just CRUD.
-
-It handles:
+It covers:
 
 Donations
 
@@ -28,123 +26,45 @@ Reimbursement reversals
 
 Reversal corrections
 
+Idempotent financial writes
+
+Transaction and row-lock protection
+
 Immutable audit history
 
-Idempotency
+Backend-derived financial balances
 
-Transactions
+The central design goal is to preserve a trustworthy financial history while still allowing mistakes to be corrected safely.
 
-Row locking
+2. Architecture
 
-Derived balances
+The module follows the backend flow:
 
-The core flow is:
-
-request
+Route
 ↓
-validation
+Controller
 ↓
-service business rules
+Service
 ↓
-transaction / row locks
-↓
-repository queries
-↓
-cash ledger / financial tables
-↓
-COMMIT or ROLLBACK
-
-The main design rule is:
-
 Repository
-→ fetches/calculates database facts
-
-Service
-→ decides what is allowed
-
-Controller
-→ receives HTTP request and sends HTTP response
-
-Route
-→ defines endpoint + middleware
-
-2. What You Should Understand vs Memorize
-
-You do not need to memorize:
-
-Long SQL CTEs
-
-Every INSERT column
-
-Every UUID
-
-Exact repository syntax
-
-Every JOIN
-
-You should understand:
-
-Why a transaction is needed
-
-Why FOR UPDATE is used
-
-Why financial history is not deleted
-
-Why corrections and reversals are separate records
-
-Why balances are calculated in the backend
-
-Why idempotency exists
-
-What USE, RESTORE, and RECONSUME mean
-
-How a request moves through the backend
-
-3. Layer Responsibilities
+↓
+PostgreSQL
 
 Route
 
-Defines:
-
-HTTP method
-
-- URL
-- authentication
-- RBAC
-- controller
-
-Example:
-
-POST /api/expenses/.../reimbursements
-↓
-JWT authentication
-↓
-ADMIN authorization
-↓
-controller
+Defines the HTTP method, URL, authentication, role-based authorization, and controller.
 
 Controller
 
-The controller should stay thin.
-
-It usually handles:
-
-req.params
-req.body
-req.user
-headers
-↓
-service
-↓
-HTTP response
+Controllers remain thin. They read request parameters, request bodies, authenticated identity, and required headers, call the service, and return the HTTP response.
 
 Service
 
-This is where the important Finance rules live.
+The service layer owns Finance business rules.
 
-Typical Finance service flow:
+Typical financial write flow:
 
-validate
+validate input
 ↓
 create request hash
 ↓
@@ -152,13 +72,15 @@ BEGIN
 ↓
 idempotency check
 ↓
-lock important rows
+lock required rows
 ↓
-check business rules
+load current financial state
+↓
+enforce business rules
 ↓
 write financial records
 ↓
-write cash ledger effects
+write audit / cash ledger effects
 ↓
 COMMIT
 
@@ -168,335 +90,218 @@ ROLLBACK
 
 Repository
 
-Repository functions handle database access.
+Repositories own SQL and database access. They perform record lookup, row locking, inserts, approved updates, aggregate calculations, derived financial totals, history reads, and cash-source calculations.
 
-Examples:
+A repository may calculate facts such as:
 
-find allocation
-insert reimbursement
-calculate effective reimbursed amount
-get eligible cash buckets
-get correction history
-
-A repository may perform calculations in SQL.
-
-Example:
-
-reimbursement
+reimbursements
 
 - reversals
 
 * reversal corrections
-  = effective reimbursement
+  = effective reimbursed amount
 
-That is still repository responsibility because it is calculating a database-derived fact.
+The service then decides whether a requested action is allowed.
 
-The service then uses that fact:
+3. Module Structure
 
-requested amount > allowed amount?
-→ reject with 409
+server/src/modules/finance/
+├── controllers/
+├── repositories/
+├── routes/
+├── services/
+├── validations/
+└── utils/
 
-4. Why Finance Uses Transactions
+Main service files include:
 
-Financial writes often affect multiple tables.
+donation.service.js
+expense.service.js
+expenseFunding.service.js
+reimbursement.service.js
 
-Example reimbursement:
+4. Core Design Principles
 
-create reimbursement
-↓
-consume shelter cash
+Financial history should be preserved.
 
-If reimbursement creation succeeds but cash consumption fails, we cannot keep half the operation.
+Mistakes are corrected through explicit audit records rather than destructive rewrites.
 
-So:
+Multi-table financial writes are atomic.
 
-BEGIN
+Balance-sensitive writes use row locks.
 
-INSERT reimbursement
-INSERT cash movement(s)
+Duplicate write requests are protected by idempotency.
 
-COMMIT
+The backend owns authoritative financial calculations.
 
-If anything fails:
+Expenses and funding are separate concepts.
 
-ROLLBACK
+Shelter cash is derived from recorded financial history.
 
-Result:
+Personal advances create liabilities that can later be reimbursed.
 
-either everything happens
-or nothing happens
+Direct payments never enter shelter cash.
 
-This is atomicity.
+5. Donations
 
-5. Why We Use FOR UPDATE
+Supported donation types:
 
-FOR UPDATE locks a row during a transaction.
+MONETARY
+IN_KIND
+DIRECT_PAYMENT
+
+5.1 MONETARY
+
+A MONETARY donation adds value to shelter cash.
+
+It may be GENERAL or restricted to an allowed purpose, category, or expense. Restricted cash may only be used for eligible expenses.
+
+5.2 IN_KIND
+
+IN_KIND donations represent physical goods such as food, medicine, or shelter supplies. They do not increase shelter cash.
+
+5.3 DIRECT_PAYMENT
+
+A DIRECT_PAYMENT occurs when a donor or payer pays a provider directly.
 
 Example:
 
-PERSONAL_ADVANCE outstanding = ₱500
-
-Two reimbursement requests arrive at the same time:
-
-Request A → ₱400
-Request B → ₱400
-
-Without locking, both could read ₱500 and both could continue.
-
-With:
-
-SELECT ...
-FOR UPDATE
-
-the flow becomes:
-
-Request A locks allocation
+Vet bill
 ↓
-Request B waits
+Donor pays veterinary clinic directly
+
+Important rule:
+
+DIRECT_PAYMENT does not enter shelter cash.
+
+A DIRECT_PAYMENT funding allocation is paired 1:1 with a linked DIRECT_PAYMENT donation record. Both represent the same real-world event and must remain aligned on important fields such as amount, payer, payment method, provider, reference, and timestamp.
+
+Standalone DIRECT_PAYMENT donation creation is blocked. The linked pair is created atomically through the Expense Funding workflow.
+
+If the linked event is wrong, the design uses:
+
+void
 ↓
-Request A writes + COMMIT
-↓
-Request B continues
-↓
-Request B recalculates fresh state
+recreate correctly
 
-Use normal SELECT for ordinary GET/read endpoints.
+rather than generic correction.
 
-Use FOR UPDATE for write transactions where later decisions depend on the current row state.
+6. Expenses
 
-6. Idempotency
-
-Finance writes use an Idempotency-Key.
-
-Purpose:
-
-client sends request
-↓
-network timeout happens
-↓
-client retries same request
-
-Without idempotency:
-
-two financial records may be created
-
-With idempotency:
-
-same key + same payload
-→ replay existing result
-
-same key + different payload
-→ 409 Conflict
-
-The request payload is converted into a hash.
-
-Typical flow:
-
-createdBy
-
-- idempotencyKey
-  ↓
-  existing record?
-
-no
-→ continue
-
-yes
-→ compare request hash
-same → replay
-different → 409
-
-A 23505 unique violation is also handled for concurrent duplicate requests.
-
-7. Donations
-
-Donation types:
-
-MONETARY
-IN_KIND
-DIRECT_PAYMENT
-
-MONETARY
-
-Money enters shelter cash.
-
-May be:
-
-GENERAL
-or
-RESTRICTED
-
-Restricted donations can be tied to category/purpose/specific expense.
-
-IN_KIND
-
-Physical goods such as food, medicine, and supplies.
-
-These do not increase shelter cash.
-
-DIRECT_PAYMENT
-
-The donor/payer pays a provider directly.
-
-Important:
-
-money does NOT enter shelter cash
-
-A DIRECT_PAYMENT donation is paired 1:1 with a DIRECT_PAYMENT expense funding allocation.
-
-The paired records must match on important fields such as:
-
-amount
-payer
-payment method
-payment provider
-reference
-event timestamp
-
-Generic donation creation does not create standalone DIRECT_PAYMENT donations.
-
-The Expense Funding workflow creates the linked pair atomically.
-
-8. Expenses
-
-Expenses record:
+An expense answers:
 
 What cost was incurred?
 
-They do not answer:
+It does not answer:
 
-How was it funded?
+How was that cost funded?
 
-That is handled separately by expense funding allocations.
-
-This allows split funding.
+Funding is modeled separately so an expense can use multiple funding sources.
 
 Example:
 
-Vet expense = ₱2,000
+Expense = ₱2,000
 
-₱600 shelter funds
-₱800 personal advance
-₱600 personal contribution
+₱600 SHELTER_FUNDS
+₱800 PERSONAL_ADVANCE
+₱600 PERSONAL_CONTRIBUTION
 
-9. Expense Funding
+Expense amount corrections preserve audit history and may not make the expense inconsistent with active funding.
 
-Funding types:
+7. Expense Funding
+
+Supported funding types:
 
 SHELTER_FUNDS
 PERSONAL_ADVANCE
 PERSONAL_CONTRIBUTION
 DIRECT_PAYMENT
 
-An expense can have multiple allocations.
+An expense may have multiple active allocations.
 
-Rule:
+Core invariant:
 
-active funding total
+sum of active funding allocations
 <=
 expense amount
 
 Partial funding is allowed.
 
-SHELTER_FUNDS
+7.1 SHELTER_FUNDS
 
-Uses actual shelter cash.
+Uses shelter-controlled cash.
 
-Flow:
-
-lock monetary donations
+lock monetary donation cash sources
 ↓
-find eligible available cash buckets
+calculate eligible available cash
 ↓
 create funding allocation
 ↓
-consume donation cash
+consume cash
 ↓
-ALLOCATION_USE ledger rows
+create ALLOCATION_USE movements
 
-If the allocation is voided:
+General cash is consumed before matching restricted cash where applicable, with deterministic ordering such as FIFO within the same priority.
 
-ALLOCATION_RESTORE
+7.2 PERSONAL_ADVANCE
 
-If the allocation amount is corrected:
+A person pays using personal money and expects repayment.
 
-restore old current cash effect
+The allocation stores the advancer through:
+
+advanced_by_user_id
+
+Initial effect:
+
+expense funded
 ↓
-recalculate eligible cash
+shelter owes advancer
 ↓
-consume corrected amount
+no immediate shelter cash decrease
 
-PERSONAL_ADVANCE
+Later, reimbursement decreases shelter cash.
 
-A person pays first using personal money.
+The reimbursement recipient is derived from advanced_by_user_id; it is not independently chosen by the frontend.
 
-This creates a payable:
+7.3 PERSONAL_CONTRIBUTION
 
-shelter owes advanced_by_user_id
+A person covers the expense personally and does not expect repayment.
 
-It does not initially decrease shelter cash.
+Effect:
 
-Later:
-
-reimbursement
-→ shelter pays the advancer
-→ shelter cash decreases
-
-The reimbursement recipient is derived from advanced_by_user_id.
-
-PERSONAL_CONTRIBUTION
-
-A person covers the expense and does not expect repayment.
-
-It creates no shelter cash decrease and no payable.
-
-DIRECT_PAYMENT
-
-The payer pays the provider directly.
-
-It creates:
-
-DIRECT_PAYMENT funding allocation
-
-- linked DIRECT_PAYMENT donation
-
-No shelter cash enters or leaves.
-
-Generic correction is blocked. If wrong:
-
-void pair
+expense funded
 ↓
-create correct pair
+no shelter cash decrease
+↓
+no payable created
 
-10. Funding Allocation Corrections
+7.4 DIRECT_PAYMENT
 
-Current truth lives in:
+A payer pays the provider directly.
+
+Effect:
+
+expense funded
+↓
+linked DIRECT_PAYMENT donation
+↓
+no shelter cash increase
+↓
+no shelter cash decrease
+
+8. Funding Allocation Corrections
+
+Current state lives in:
 
 expense_funding_allocations
 
-Historical truth lives in:
+Correction history lives in:
 
 funding_allocation_corrections
 
-A correction stores:
+A correction preserves old and new state plus reason, timestamp, and actor.
 
-old_state
-new_state
-correction_reason
-corrected_at
-created_by
-
-The frontend does not provide old_state.
-
-The service builds it from the locked database row.
-
-The frontend provides the new requested state.
-
-Why snapshots use JSONB
-
-Different funding types have different conditional fields.
-
-A snapshot may include:
+Snapshots may include fields such as:
 
 fundingType
 allocationAmount
@@ -511,7 +316,7 @@ outsidePayerName
 directPaymentDonationId
 notes
 
-Funding type is immutable during correction
+8.1 Funding Type Is Immutable
 
 Allowed:
 
@@ -523,94 +328,132 @@ Not allowed:
 PERSONAL_ADVANCE
 → SHELTER_FUNDS
 
-If funding type was wrong:
+If the funding type is wrong:
 
-void incorrect allocation
+void original allocation
 ↓
 create new correct allocation
 
-11. Finance Cash Source Ledger
+8.2 SHELTER_FUNDS Amount Correction
+
+When the amount changes:
+
+restore current active allocation-use cash
+↓
+recalculate currently eligible cash
+↓
+consume corrected amount
+
+A notes-only correction does not create new cash movements.
+
+8.3 PERSONAL_ADVANCE Correction Rules
+
+A correction cannot reduce the advance below the effective amount already reimbursed.
+
+new advance amount
+
+> =
+> effective reimbursed amount
+
+Once reimbursement history exists:
+
+advancedByUserId cannot change
+
+because historical reimbursement meaning depends on the original advancer.
+
+9. Funding Allocation Voids
+
+Funding allocations are not hard-deleted.
+
+Important rules:
+
+SHELTER_FUNDS void restores currently active cash use.
+
+DIRECT_PAYMENT void handles the linked pair atomically.
+
+PERSONAL_ADVANCE cannot be voided once reimbursement history exists.
+
+The PERSONAL_ADVANCE restriction remains even if reimbursements were later fully reversed, because the historical dependency still exists.
+
+10. Finance Cash Source Ledger
+
+Internal cash effects are recorded in:
+
+finance_cash_source_movements
 
 Important movement types:
 
 ALLOCATION_USE
 ALLOCATION_RESTORE
-
 REIMBURSEMENT_USE
 REIMBURSEMENT_RESTORE
 REIMBURSEMENT_RECONSUME
 
-The ledger is internal accounting history and should not be hard-deleted.
+The ledger is internal accounting history and is not intended as a normal public-facing endpoint.
 
-Allocation example
+10.1 Allocation Example
 
-Original shelter funding:
+Original funding:
 
 ALLOCATION_USE ₱600
 
-Correction to ₱400:
+Correction from ₱600 to ₱400:
 
 ALLOCATION_RESTORE ₱600
 ALLOCATION_USE ₱400
 
-Second correction to ₱300:
+Second correction from ₱400 to ₱300:
 
 ALLOCATION_RESTORE ₱400
 ALLOCATION_USE ₱300
 
-Current effective use:
+Current effective use is ₱300.
 
-₱300
+11. Personal Advance Reimbursements
 
-12. Personal Advance Reimbursements
-
-Suppose:
-
-PERSONAL_ADVANCE = ₱800
-
-A reimbursement of ₱300 means:
-
-shelter pays advancer ₱300
-↓
-REIMBURSEMENT_USE ₱300
-
-Outstanding payable becomes:
-
-₱800 - ₱300 = ₱500
-
-reimbursedAt vs createdAt
-
-reimbursedAt:
-
-when the money was actually paid
-
-createdAt:
-
-when the record was entered into the system
+A reimbursement repays a PERSONAL_ADVANCE.
 
 Example:
 
-actual payment = 3:00 AM
-record created = 3:30 AM
+PERSONAL_ADVANCE = ₱800
+Reimbursement = ₱300
 
-Then:
+Effect:
 
-reimbursedAt = 3:00 AM
-createdAt = 3:30 AM
+shelter pays advancer
+↓
+REIMBURSEMENT_USE
+↓
+shelter cash decreases
 
-The frontend should allow reimbursedAt input, but may default it to the current time.
+Important rules:
 
-13. Effective Reimbursement Formula
+allocation must exist
+allocation must be active
+allocation must be PERSONAL_ADVANCE
+amount must be positive
+amount must not exceed outstanding balance
+reimbursedAt must not be earlier than fundedAt
 
-The most important reimbursement formula:
+11.1 reimbursedAt
+
+reimbursedAt is the real-world payment time.
+
+createdAt is the system record creation time.
+
+The frontend may default reimbursedAt to the current time, but it remains an event timestamp rather than an audit timestamp.
+
+12. Effective Reimbursement
+
+Authoritative formula:
 
 # effective reimbursement
 
-reimbursements
+total reimbursements
 
-- reversals
+- total reversals
 
-* reversal corrections
+* total reversal corrections
 
 Example:
 
@@ -620,7 +463,7 @@ Reversal corrections +₱40
 ──────────────────────────────
 Effective reimbursement ₱90
 
-If the advance is ₱800:
+For an ₱800 advance:
 
 # Outstanding
 
@@ -628,69 +471,51 @@ If the advance is ₱800:
 
 ₱710
 
-The frontend should not calculate this.
+The backend returns this value. The frontend does not recalculate it independently.
 
-The backend returns a summary such as:
+13. Reimbursement Reversals
 
-{
-"advanceAmount": 800,
-"effectiveReimbursedAmount": 90,
-"outstandingAmount": 710
-}
+Reimbursements are immutable.
 
-14. Reimbursement Reversal
-
-A reimbursement is immutable.
-
-If a reimbursement was wrong, do not update/delete it.
-
-Instead:
+If a reimbursement is wrong, the system does not update or delete it. Instead:
 
 create reimbursement reversal
 
 Example:
 
-reimbursement = ₱300
-reversal = ₱100
+Reimbursement = ₱300
+Reversal = ₱100
 
-Effective reimbursement:
-
-₱200
-
-Cash effect:
+Effect:
 
 REIMBURSEMENT_USE ₱300
 REIMBURSEMENT_RESTORE ₱100
 
-15. Why Reversal Records Are Immutable
+Remaining reversible amount:
 
-Financial history should preserve what happened.
+reimbursement amount
 
-Instead of changing the past:
+- total reversals
 
-record original event
-↓
-record reversal
-↓
-record correction if reversal was wrong
+* total reversal corrections
 
-This creates a complete audit trail.
+Multiple partial reversals are allowed.
 
-16. Reversal Correction
+14. Reimbursement Reversal Corrections
 
-A reversal itself may also be wrong.
+Reversals are also immutable.
+
+If a reversal is wrong:
+
+create reversal correction
 
 Example:
 
 Reimbursement ₱300
 Reversal -₱150
-Correction +₱40
+Reversal correction +₱40
 
-Effective reimbursement:
-
-₱190
-
-Cash effect:
+A reversal correction re-applies part of the reimbursement's cash effect:
 
 REIMBURSEMENT_USE
 ↓
@@ -698,510 +523,634 @@ REIMBURSEMENT_RESTORE
 ↓
 REIMBURSEMENT_RECONSUME
 
-Why reconsume?
+Remaining correctable amount:
 
-Because the reversal previously returned cash.
+reversal amount
 
-Correcting that reversal means some of that cash must be treated as spent again.
+- total reversal corrections
 
-17. Cash Ledger Parent Relationships
+The correction must also not make effective reimbursement exceed the current advance amount.
 
-Important mental model:
+15. Reimbursement Cash Movement Relationships
 
 REIMBURSEMENT_USE
-parent = reimbursement_id
+
+Parent:
+
+reimbursement_id
 
 REIMBURSEMENT_RESTORE
-parent = reversal_id
+
+Parent:
+
+reversal_id
+
+Relationship:
+
 related_cash_movement_id
 → original REIMBURSEMENT_USE
 
+reimbursement_id is not the parent of a restore movement.
+
 REIMBURSEMENT_RECONSUME
-parent = correction_id
+
+Parent:
+
+correction_id
+
+Relationship:
+
 related_cash_movement_id
 → REIMBURSEMENT_RESTORE
 
 Audit chain:
 
-USE
+REIMBURSEMENT_USE
 ↓
-RESTORE
-↓
-RECONSUME
-
-18. Why related_cash_movement_id Matters
-
-It tells us exactly which previous ledger movement is being reversed or re-applied.
-
-Example:
-
 REIMBURSEMENT_RESTORE
-related_cash_movement_id
-→ original REIMBURSEMENT_USE
-
-This preserves source relationships.
-
-19. Partial Reversals
-
-A reimbursement can have multiple partial reversals.
-
-Example:
-
-reimbursement = ₱300
-
-first reversal = ₱100
-second reversal = ₱150
-
-Remaining reversible:
-
-₱50
-
-Formula:
-
-# remaining reversible
-
-reimbursement
-
-- reversals
-
-* reversal corrections
-
-20. Partial Reversal Corrections
-
-A reversal can have multiple partial corrections.
-
-Example:
-
-reversal = ₱150
-correction = ₱40
-
-Remaining correctable:
-
-₱110
-
-Formula:
-
-# remaining correctable
-
-reversal amount
-
-- reversal corrections
-
-21. Important Guards
-
-Expense Funding
-
-Reject if:
-
-new allocation causes overfunding
-
-PERSONAL_ADVANCE Correction
-
-Reject if:
-
-new advance amount
-<
-effective reimbursed amount
-
-Example:
-
-effective reimbursed = ₱90
-new advance = ₱80
-→ 409
-
-Advancer identity protection
-
-Once reimbursement history exists:
-
-advancedByUserId cannot change
-
-Why?
-
-Because reimbursement recipient is derived from the original advancer.
-
-PERSONAL_ADVANCE void protection
-
-If reimbursement history has ever existed:
-
-PERSONAL_ADVANCE allocation cannot be voided
-
-Even if reimbursements were later reversed.
-
-Reimbursement guard
-
-Reject if:
-
-reimbursementAmount
-
-> outstanding personal advance
-
-Reimbursement timestamp guard
-
-Reject if:
-
-reimbursedAt
-<
-fundedAt
-
-Reversal guard
-
-Reject if:
-
-reversalAmount
-
-> remaining reversible amount
-
-Reversal correction guard
-
-Reject if:
-
-correctionAmount
-
-> remaining correctable amount
-
-Also reject if applying the correction would make:
-
-effective reimbursed
-
-> current advance amount
-
-22. Why We Use Integer Cents in Service Logic
-
-JavaScript floating-point numbers can behave badly for money.
-
-So helpers convert:
-
-₱300.25
 ↓
-30025 cents
+REIMBURSEMENT_RECONSUME
 
-Then arithmetic is done using integers.
+16. Reversal Correction and Current Cash Availability
 
-Helpers:
+Restored cash may have been spent by another valid transaction after the reversal.
+
+Therefore a reversal correction must check both:
+
+historically reconsumable restore amount
+
+- currently available eligible cash
+
+Only currently available eligible cash can be consumed again.
+
+This prevents double-spending restored cash.
+
+17. Idempotency
+
+Required financial writes use actor + idempotency key + request hash.
+
+Behavior:
+
+same actor
+
+- same key
+- same payload hash
+  → replay existing result
+
+same actor
+
+- same key
+- different payload hash
+  → 409 Conflict
+
+This protects against network retries, double submission, and concurrent duplicate requests.
+
+Database uniqueness provides an additional protection layer. Concurrent 23505 conflicts are handled where appropriate by resolving the already-created idempotent result.
+
+18. Transactions
+
+Financial writes that form one business event use PostgreSQL transactions.
+
+BEGIN
+↓
+lock
+↓
+validate current state
+↓
+write primary record
+↓
+write related audit / cash effects
+↓
+COMMIT
+
+Any failure causes:
+
+ROLLBACK
+
+This guarantees all-or-nothing behavior.
+
+19. Row Locking
+
+Balance-sensitive writes use:
+
+SELECT ... FOR UPDATE
+
+Example:
+
+Outstanding advance = ₱500
+
+Request A = ₱400
+Request B = ₱400
+
+With row locking:
+
+Request A locks row
+↓
+Request B waits
+↓
+Request A commits
+↓
+Request B reads fresh state
+↓
+Request B is rejected if balance is no longer enough
+
+Normal GET endpoints use non-locking reads.
+
+20. Money Arithmetic
+
+Database money uses fixed decimal values.
+
+Service-layer calculations use integer-cent helpers where needed:
 
 toCents()
 fromCents()
 
-Useful for split cash consumption, partial restores, and partial reconsumption.
-
-23. Why for...of Was Used
-
-Financial cash consumption is ordered and uses await.
-
 Example:
 
-for (const bucket of buckets) {
-await createMovement(...);
-}
+₱300.25
+→ 30025 cents
 
-This gives deterministic sequential processing.
+This avoids unsafe JavaScript floating-point arithmetic in balance-sensitive calculations.
 
-24. Why Eligible Cash Buckets Are Ordered
+21. Core Financial Invariants
 
-Cash consumption follows a deterministic strategy:
+Expense Funding
 
-GENERAL first
-↓
-matching RESTRICTED
-↓
-FIFO within priority
+active funding total
+<=
+expense amount
 
-This makes cash usage predictable and auditable.
+PERSONAL_ADVANCE
 
-25. WITH / CTE Refresher
+effective reimbursed amount
+<=
+personal advance amount
 
-A CTE:
+Reimbursement
 
-WITH something AS (
-SELECT ...
-)
+reimbursement amount
+<=
+outstanding advance
 
-is like creating a temporary named result inside one SQL query.
+Reversal
 
-Mental comparison:
+reversal amount
+<=
+remaining reversible amount
 
-const something = ...
+Reversal Correction
 
-Remember:
+correction amount
+<=
+remaining correctable amount
 
-WITH
-→ calculate intermediate database facts
+and:
 
-26. UNION ALL Refresher
+effective reimbursement after correction
+<=
+current advance amount
 
-UNION ALL stacks query results and keeps duplicates.
+Advancer Identity
 
-In a financial ledger, every event matters.
+Once reimbursement history exists:
 
-So if we have:
+advancedByUserId is immutable
 
-original bucket
-restriction change
-cash use
-cash restore
+Personal Advance Void
 
-we want every event included.
+Once reimbursement history exists:
 
-27. Read Endpoints / Frontend Shape
+PERSONAL_ADVANCE cannot be voided
 
-Useful reads include:
+DIRECT_PAYMENT
 
-funding allocations for expense
-funding allocation correction history
-reimbursements for personal advance
-reversals for reimbursement
-reversal corrections for reversal
-personal advance reimbursement summary
+DIRECT_PAYMENT linked records represent one event. Generic correction is blocked; void + recreate is used.
 
-The frontend should mostly:
+22. Read Model
+
+The frontend receives human-readable, backend-derived data.
+
+Important reads include:
+
+Funding allocations for an expense
+
+Funding allocation correction history
+
+Reimbursements for a personal advance
+
+Reversals for a reimbursement
+
+Reversal corrections for a reversal
+
+Personal advance reimbursement summary
+
+Frontend responsibility is primarily:
 
 fetch
 ↓
-store in state
+store
 ↓
 render
 
-It should not duplicate accounting formulas.
+The frontend should not duplicate accounting formulas.
 
-28. Frontend Principle
+23. Reimbursement-Related Endpoints
 
-Do not make React interpret raw ledger rows unless building an admin audit screen.
+POST /api/expenses/funding-allocations/:allocationId/reimbursements
+GET /api/expenses/funding-allocations/:allocationId/reimbursements
+GET /api/expenses/funding-allocations/:allocationId/reimbursement-summary
 
-Normal UI should show:
+POST /api/expenses/reimbursements/:reimbursementId/reversals
+GET /api/expenses/reimbursements/:reimbursementId/reversals
 
-Personal Advance: ₱800
-Reimbursed: ₱90
-Outstanding: ₱710
+POST /api/expenses/reimbursement-reversals/:reversalId/corrections
+GET /api/expenses/reimbursement-reversals/:reversalId/corrections
 
-History:
+Write endpoints require the appropriate Finance authorization. Read endpoints use Finance read permissions.
 
-Reimbursement ₱300
-Reversal ₱100
-Reversal ₱150
-Reversal correction ₱40
+24. Personal Advance Reimbursement Summary
 
-The raw cash ledger is mainly backend/accounting machinery.
+Example response shape:
 
-29. Why Finance Became Large
+{
+"allocationId": "uuid",
+"advanceAmount": 800,
+"effectiveReimbursedAmount": 90,
+"outstandingAmount": 710
+}
 
-Finance must answer questions such as:
+The frontend displays these backend-owned values directly.
 
-Where did this money come from?
-Was it restricted?
-Was it already spent?
-Who paid personally?
-How much is still owed?
-What if a reimbursement was wrong?
-What if the reversal was also wrong?
-What if two admins submit at the same time?
-What if a request retries after a timeout?
+25. Audit Strategy
 
-That is why Finance is much larger than ordinary CRUD modules.
+The Finance module avoids destructive financial edits.
 
-30. Debugging Lessons From This Module
+Typical patterns:
 
-Wrong helper used
+original record
+↓
+correction record
 
-A reversal initially called the allocation cash helper instead of the reimbursement cash helper.
+or:
 
-Result:
+original financial event
+↓
+reversal
+↓
+reversal correction
 
-no restorable reimbursement cash found
+This preserves:
 
-Lesson:
+Original event
 
-similar helper names
-≠
-same financial relationship
+Actor
 
-Database constraint caught a bad parent relationship
+Change reason
 
-A REIMBURSEMENT_RESTORE initially attempted to store both:
+Change timestamp
 
-reimbursement_id
+Current effective state
 
-- reversal_id
-
-The database rejected it with a CHECK constraint.
-
-Correct design:
-
-REIMBURSEMENT_RESTORE
-parent = reversal_id
-related movement = REIMBURSEMENT_USE
-
-Lesson:
-
-constraints are not just restrictions
-→ they protect the financial model
-
-Transaction saved us during bugs
-
-Several failed tests inserted temporary records before a later step failed.
-
-Because they were inside:
-
-BEGIN
-...
-ROLLBACK
-
-the database did not keep partial financial history.
-
-31. HTTP Status Mental Model
+26. HTTP Error Semantics
 
 400
-→ invalid request/input
+invalid request / validation failure
 
 401
-→ authentication missing/invalid
+missing or invalid authentication
 
 403
-→ authenticated but not authorized
+authenticated but unauthorized
 
 404
-→ requested record does not exist
+requested record does not exist
 
 409
-→ request conflicts with current business state
+request conflicts with current financial state
 
-Finance uses 409 heavily for:
+Typical Finance 409 cases include:
 
-overfunding
-over-reimbursement
-invalid correction
-already voided
-idempotency conflict
-history prevents change
+Overfunding
 
-32. Interview Questions & Short Answers
+Over-reimbursement
 
-Why did you separate controller, service, and repository?
+Reversal above remaining reversible amount
 
-I separated them by responsibility. Controllers handle HTTP requests and responses, services enforce validation and business rules, and repositories handle SQL/database access. This makes the code easier to maintain, test, and change.
+Correction above remaining correctable amount
 
-Why use transactions?
+Personal advance amount below effective reimbursed amount
 
-Finance operations often affect multiple records. A transaction ensures either all related writes succeed or all are rolled back, preventing partial financial state.
+Changing advancer after reimbursement history exists
 
-Why use FOR UPDATE?
+Voiding personal advance after reimbursement history exists
 
-It locks a row during a transaction so concurrent financial requests cannot calculate balances from the same stale state and both succeed incorrectly.
+DIRECT_PAYMENT correction attempt
 
-Why use idempotency?
+Idempotency key reused with different payload
 
-Financial requests may be retried because of network issues. Idempotency prevents the same request from creating duplicate transactions. Same key and same payload replays the result; same key and different payload returns a conflict.
+27. Database Constraints
 
-Why not delete incorrect financial records?
+Database constraints are part of the safety model.
 
-Deleting would destroy audit history. Instead, the system uses voids, reversals, and corrections so the original event and every later change remain traceable.
+Examples:
 
-Why does a reimbursement reduce shelter cash?
+Positive monetary amounts
 
-A personal advance means someone paid first using personal funds. When the shelter reimburses them, shelter money is actually paid out, so the reimbursement consumes shelter cash.
+Valid enum values
 
-Why does a reimbursement reversal restore cash?
+Valid timestamps
 
-A reversal means part of the recorded reimbursement should no longer count as having been paid, so its cash effect is restored.
+Foreign keys
 
-Why does a reversal correction reconsume cash?
+Unique actor + idempotency key
 
-A reversal correction says part of the reversal was wrong. That means some of the reimbursement should count again, so that amount is consumed again from shelter cash.
+Cash movement parent constraints
 
-Why calculate balances in the backend?
+The cash movement parent rules enforce:
 
-The backend owns business rules and financial truth. The frontend should display the derived balances rather than duplicating accounting logic that could become inconsistent or insecure.
+REIMBURSEMENT_USE
+→ reimbursement parent
 
-Why is advancedByUserId locked after reimbursement history exists?
+REIMBURSEMENT_RESTORE
+→ reversal parent
 
-The reimbursement recipient is derived from the user who originally advanced the money. Changing that user after reimbursement history exists would rewrite the meaning of historical financial records.
+REIMBURSEMENT_RECONSUME
+→ correction parent
 
-33. 5-Minute Refresher
+These constraints protect the financial model even if application code contains a bug.
 
-If you only have a few minutes, remember this:
+28. Concurrency Strategy
+
+Concurrency-sensitive operations generally use:
+
+BEGIN
+↓
+lock primary financial row
+↓
+lock related balance sources where required
+↓
+calculate current state
+↓
+enforce rules
+↓
+write
+↓
+COMMIT
+
+This applies to workflows such as funding allocation creation/correction/void, reimbursements, reimbursement reversals, and reversal corrections.
+
+29. Frontend Expectations
+
+The frontend should expose human workflows instead of raw accounting internals.
+
+Useful user-facing values include:
 
 Expense
-→ what was spent
+Funding type
+Funding amount
+Personal advance owner
+Amount reimbursed
+Outstanding amount
+Reimbursement history
+Reversal history
+Correction history
+
+The raw cash-source ledger should normally remain internal, except possibly for a future administrative audit screen.
+
+30. Security and Identity
+
+System actor fields must come from trusted authentication context.
+
+Examples:
+
+created_by
+updated_by
+voided_by
+
+These must not be trusted from request bodies.
+
+Payer/owner fields such as:
+
+advanced_by_user_id
+contributed_by_user_id
+direct_paid_by_user_id
+
+represent the real-world person involved in the financial event and are separate from the authenticated user performing the system action.
+
+31. Timestamp Rules
+
+Real-world event timestamps may include:
+
+fundedAt
+reimbursedAt
+
+System audit timestamps include:
+
+createdAt
+updatedAt
+reversedAt
+correctedAt
+
+System action timestamps are backend/database controlled so clients cannot rewrite audit history.
+
+32. Known Design Constraints
+
+Current intentional constraints include:
+
+Funding type cannot change through correction.
+
+DIRECT_PAYMENT uses void + recreate instead of generic correction.
+
+PERSONAL_ADVANCE cannot be voided after reimbursement history exists.
+
+advancedByUserId cannot change after reimbursement history exists.
+
+Reimbursements are immutable.
+
+Reversals are immutable.
+
+Reversal corrections are immutable.
+
+Raw cash ledger movements are internal.
+
+Derived financial balances are backend-owned.
+
+These constraints favor auditability and consistency over convenience.
+
+33. Example Personal Advance Lifecycle
+
+Expense created
+₱2,000
+↓
+PERSONAL_ADVANCE
+₱800
+↓
+shelter owes advancer ₱800
+↓
+reimbursement ₱300
+↓
+REIMBURSEMENT_USE ₱300
+↓
+effective reimbursed = ₱300
+outstanding = ₱500
+↓
+reversal ₱100
+↓
+REIMBURSEMENT_RESTORE ₱100
+↓
+effective reimbursed = ₱200
+outstanding = ₱600
+↓
+reversal correction ₱40
+↓
+REIMBURSEMENT_RECONSUME ₱40
+↓
+effective reimbursed = ₱240
+outstanding = ₱560
+
+34. Example Split Funding
+
+Expense = ₱2,000
+
+SHELTER_FUNDS ₱300
+PERSONAL_CONTRIBUTION ₱600
+PERSONAL_ADVANCE ₱800
+DIRECT_PAYMENT ₱100
+───────────────────────────
+Total funded ₱1,800
+
+The remaining ₱200 may stay unfunded because partial funding is allowed.
+
+35. Maintenance Guidance
+
+When changing Finance behavior:
+
+Identify whether current financial truth changes.
+
+Identify whether audit history must be preserved.
+
+Check whether shelter cash changes.
+
+Check whether a personal payable changes.
+
+Determine whether idempotency is required.
+
+Determine whether concurrency can cause stale-balance decisions.
+
+Use a transaction when multiple writes form one financial event.
+
+Use row locks for balance-sensitive state.
+
+Keep authoritative formulas in the backend.
+
+Test both valid and invalid state transitions.
+
+36. Testing Expectations
+
+Important Finance tests include:
+
+Valid creation
+
+Validation failures
+
+Not-found cases
+
+Wrong funding type
+
+Overfunding
+
+Insufficient cash
+
+Restricted cash eligibility
+
+Idempotent replay
+
+Idempotency conflict
+
+Concurrent duplicate protection
+
+Void behavior
+
+Correction behavior
+
+Reimbursement outstanding guard
+
+Reimbursement timestamp guard
+
+Reversal amount guard
+
+Reversal correction amount guard
+
+Effective reimbursement calculation
+
+Reimbursement-history restrictions on PERSONAL_ADVANCE
+
+Cash ledger use / restore / reconsume behavior
+
+Read history ordering
+
+Reimbursement summary accuracy
+
+37. Backend Completion Status
+
+Donations ✅
+Expenses ✅
+Expense Funding ✅
+Split Funding ✅
+Funding Corrections ✅
+Funding Voids ✅
+Cash Source Ledger ✅
+Personal Advance Reimbursements ✅
+Reimbursement Reversals ✅
+Reversal Corrections ✅
+History Reads ✅
+Reimbursement Summary ✅
+Idempotency ✅
+Transactions ✅
+Row Locking ✅
+Backend-Derived Balances ✅
+
+Frontend integration is a separate implementation phase.
+
+38. Summary
+
+The Finance module separates its concepts clearly:
+
+Donation
+→ where support came from
+
+Expense
+→ what cost was incurred
 
 Funding allocation
-→ how expense was funded
+→ how the expense was funded
 
-SHELTER_FUNDS
-→ uses shelter cash
+Cash movement
+→ how shelter-controlled cash changed
 
-PERSONAL_ADVANCE
-→ shelter owes someone
+Personal advance
+→ amount the shelter owes a person
 
-PERSONAL_CONTRIBUTION
-→ person pays, no repayment
+Reimbursement
+→ shelter repayment of that advance
 
-DIRECT_PAYMENT
-→ payer pays provider directly
+Reversal
+→ undo part of a reimbursement
 
-Then:
+Reversal correction
+→ correct part of a reversal
 
-PERSONAL_ADVANCE
-↓
-reimbursement
-→ REIMBURSEMENT_USE
+The module is built around:
 
-reversal
-→ REIMBURSEMENT_RESTORE
+auditability
+consistency
+atomic writes
+concurrency safety
+retry safety
+backend-owned financial truth
 
-reversal correction
-→ REIMBURSEMENT_RECONSUME
+This file is the authoritative technical reference for the Finance module.
 
-And:
+For study notes, interview review, and personal refresher material, use:
 
-# effective reimbursement
-
-reimbursements
-
-- reversals
-
-* reversal corrections
-
-Finally:
-
-transaction
-→ all or nothing
-
-FOR UPDATE
-→ concurrency safety
-
-idempotency
-→ retry safety
-
-immutable history
-→ audit safety
-
-34. 15-Minute Study Order
-
-Study in this order:
-
-Layer responsibilities
-
-Expense vs funding
-
-Four funding types
-
-PERSONAL_ADVANCE lifecycle
-
-Cash movement types
-
-Effective reimbursement formula
-
-Transactions
-
-FOR UPDATE
-
-Idempotency
-
-Corrections/reversals
-
-Important guards
-
-Interview answers
-
-35. One-Sentence Summary
-
-The Finance module separates expenses from funding, preserves immutable financial history, derives balances from transactional records, protects concurrent writes with row locks, prevents duplicate writes with idempotency, and tracks every shelter-cash effect through an auditable ledger.
+docs/finance-module-reviewer.md
