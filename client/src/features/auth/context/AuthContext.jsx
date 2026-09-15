@@ -1,11 +1,11 @@
 import { createContext, useEffect, useState } from "react";
-
 import {
   getMe,
   login as loginRequest,
   logout as logoutRequest,
 } from "../api/authApi";
 
+import { setUnauthorizedHandler } from "../../../api/apiClient";
 const AuthContext = createContext(null);
 
 function AuthProvider({ children }) {
@@ -26,6 +26,16 @@ function AuthProvider({ children }) {
     }
 
     checkAuth();
+  }, []);
+
+  useEffect(() => {
+    setUnauthorizedHandler(() => {
+      setUser(null);
+    });
+
+    return () => {
+      setUnauthorizedHandler(null);
+    };
   }, []);
 
   async function login(credentials) {
