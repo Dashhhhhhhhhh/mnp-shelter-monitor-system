@@ -1,0 +1,91 @@
+.create-animal-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgb(0 0 0 / 50%);
+  z-index: 200;
+
+  display: grid;
+  place-items: center;
+
+  padding: 1rem;
+}
+
+.create-animal-modal {
+  width: min(520px, 100%);
+  max-height: 90vh;
+  overflow-y: auto;
+
+  background: #fff;
+  color: #222;
+
+  border-radius: 12px;
+  padding: 1.5rem;
+  box-sizing: border-box;
+
+  box-shadow: 0 12px 40px rgb(0 0 0 / 20%);
+}
+
+.create-animal-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+
+  margin-bottom: 1.5rem;
+}
+
+.create-animal-modal-header h2 {
+  margin: 0;
+  color: #222;
+  font-size: 1.25rem;
+  font-weight: 600;
+}
+
+.create-animal-modal-header button {
+  border: 0;
+  background: transparent;
+  color: #222;
+  font-size: 1.1rem;
+  cursor: pointer;
+}
+
+.create-animal-form {
+  display: grid;
+  gap: 1rem;
+}
+
+.create-animal-form label {
+  display: grid;
+  gap: 0.4rem;
+  font-weight: 600;
+}
+
+.create-animal-form input,
+.create-animal-form select {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 0.6rem 0.75rem;
+}
+
+.create-animal-checkbox {
+  display: flex !important;
+  align-items: center;
+  gap: 0.5rem;
+  font-weight: 500 !important;
+}
+
+.create-animal-checkbox input {
+  width: auto;
+}
+
+.create-animal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+  margin-top: 0.5rem;
+}
+
+.create-animal-error {
+  margin: 0;
+  color: #b42318;
+}

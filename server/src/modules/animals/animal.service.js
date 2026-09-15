@@ -17,6 +17,14 @@ import {
   validateUpdateAnimalInput,
 } from "./animal.validation.js";
 
+import { findActiveAssignmentByAnimalId } from "../cage_assignments/cageAssignment.repository.js";
+
+import { findCageById } from "../cages/cage.repository.js";
+
+import { findIntakesByAnimalId } from "../intake/intake.repository.js";
+
+import { findUserById } from "../users/user.repository.js";
+
 function validateIdempotencyKey(idempotencyKey) {
   const uuidPattern =
     /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -235,6 +243,58 @@ async function getAnimalById(animalId) {
     throw error;
   }
 
+  const activeAssignment = await findActiveAssignmentByAnimalId(validAnimalId);
+
+  let currentCage = null;
+
+  if (activeAssignment) {
+    const cage = await findCageById(activeAssignment.cage_id);
+
+    if (cage) {
+      currentCage = {
+        assignmentId: activeAssignment.assignment_id,
+        cageId: cage.cage_id,
+        cageCode: cage.cage_code,
+        cageType: cage.cage_type,
+        location: cage.location,
+        speciesGroup: cage.species_group,
+        genderGroup: cage.gender_group,
+        recommendedCapacity: cage.recommended_capacity,
+        assignedAt: activeAssignment.assigned_at,
+        reason: activeAssignment.reason,
+      };
+    }
+  }
+
+  const intakes = await findIntakesByAnimalId(validAnimalId);
+
+  const latestIntake = intakes[0] || null;
+
+  let rescuedByUser = null;
+
+  if (latestIntake?.rescued_by_user_id) {
+    rescuedByUser = await findUserById(latestIntake.rescued_by_user_id);
+  }
+
+  const mappedLatestIntake = latestIntake
+    ? {
+        intakeId: latestIntake.intake_id,
+        intakeDate: latestIntake.intake_date,
+        intakeCategory: latestIntake.intake_category,
+        intakeSource: latestIntake.intake_source,
+        foundLocation: latestIntake.found_location,
+        ageAtIntake: latestIntake.age_at_intake,
+        observedCondition: latestIntake.observed_condition,
+        rescuedByUserId: latestIntake.rescued_by_user_id,
+        outsideRescuerName: latestIntake.outside_rescuer_name,
+        outsideRescuerContact: latestIntake.outside_rescuer_contact,
+        notes: latestIntake.notes,
+        rescuedByName: rescuedByUser
+          ? `${rescuedByUser.first_name} ${rescuedByUser.last_name}`
+          : null,
+      }
+    : null;
+
   return {
     animalId: animal.animal_id,
     animalCode: animal.animal_code,
@@ -249,6 +309,10 @@ async function getAnimalById(animalId) {
     status: animal.status,
     healthStatus: animal.health_status,
     adoptionStatus: animal.adoption_status,
+
+    currentCage,
+    latestIntake: mappedLatestIntake,
+
     createdBy: animal.created_by,
     updatedBy: animal.updated_by,
     createdAt: animal.created_at,

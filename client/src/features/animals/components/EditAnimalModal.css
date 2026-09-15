@@ -1,0 +1,106 @@
+.edit-animal-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgb(0 0 0 / 50%);
+  z-index: 200;
+
+  display: grid;
+  place-items: center;
+
+  padding: 1rem;
+}
+
+.edit-animal-modal {
+  width: min(520px, 100%);
+  max-height: 90vh;
+  overflow-y: auto;
+
+  background: #fff;
+  color: #222;
+
+  border-radius: 12px;
+  padding: 1.5rem;
+  box-sizing: border-box;
+
+  box-shadow: 0 12px 40px rgb(0 0 0 / 20%);
+}
+
+.edit-animal-modal-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+
+  margin-bottom: 1.5rem;
+}
+
+.edit-animal-modal-header h2,
+.edit-animal-modal-header p {
+  margin: 0;
+}
+
+.edit-animal-modal-header button {
+  border: 0;
+  background: transparent;
+  color: #222;
+  font-size: 1.1rem;
+  cursor: pointer;
+}
+
+.edit-animal-form {
+  display: grid;
+  gap: 1rem;
+}
+
+.edit-animal-form label {
+  display: grid;
+  gap: 0.4rem;
+  font-weight: 600;
+}
+
+.edit-animal-form input,
+.edit-animal-form select {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 0.6rem 0.75rem;
+}
+
+.edit-animal-form input:disabled {
+  background: #f3f3f3;
+  color: #666;
+}
+
+.edit-animal-checkbox {
+  display: flex !important;
+  grid-template-columns: none;
+  align-items: center;
+  gap: 0.5rem;
+  font-weight: 500 !important;
+}
+
+.edit-animal-checkbox input {
+  width: auto;
+}
+.edit-animal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+  margin-top: 0.5rem;
+}
+
+.edit-animal-error {
+  margin: 0;
+  color: #b42318;
+}
+
+.edit-animal-modal-header h2 {
+  color: #222;
+  font-size: 1.25rem;
+  font-weight: 600;
+  margin: 0;
+}
+
+.edit-animal-modal-header p {
+  color: #444;
+  margin: 0;
+}

@@ -1,0 +1,127 @@
+.animals-page-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.animals-page-header h1 {
+  margin: 0;
+}
+
+.animals-page-header p {
+  margin: 0.25rem 0 0;
+}
+
+.animals-toolbar {
+  display: grid;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.animals-search input {
+  width: min(400px, 100%);
+  padding: 0.65rem 0.75rem;
+  box-sizing: border-box;
+}
+
+.animals-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.animals-filters select {
+  min-width: 140px;
+  padding: 0.55rem 0.65rem;
+}
+
+.animals-page {
+  width: min(1100px, 100%);
+  margin: 0 auto;
+  padding: 1.5rem;
+  box-sizing: border-box;
+}
+
+.animals-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 1rem;
+}
+
+.animals-table th,
+.animals-table td {
+  padding: 0.75rem 0.85rem;
+  text-align: left;
+  border-bottom: 1px solid rgb(255 255 255 / 8%);
+}
+
+.animals-table th {
+  font-weight: 600;
+}
+
+.animals-table tbody tr:hover {
+  background: rgb(255 255 255 / 4%);
+}
+
+.animals-page-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.animals-page-header h1 {
+  margin: 0;
+  font-size: 2rem;
+}
+
+.animals-page-header button {
+  padding: 0.65rem 1rem;
+  border: 0;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.animals-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  align-items: center;
+}
+
+.animals-filters select {
+  min-width: 140px;
+  padding: 0.55rem 0.65rem;
+}
+
+.animals-filters button {
+  padding: 0.55rem 0.75rem;
+  cursor: pointer;
+}
+
+.animal-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  margin-top: 1.25rem;
+}
+
+.animal-pagination button {
+  padding: 0.5rem 0.8rem;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.animal-pagination button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.animal-pagination span {
+  font-size: 0.95rem;
+}
