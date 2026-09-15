@@ -4,7 +4,7 @@ import {
   findCages,
   findCageById,
   updateCageRecord,
-  findCageByIdempotencyKey
+  findCageByIdempotencyKey,
 } from "./cage.repository.js";
 
 import {
@@ -12,6 +12,8 @@ import {
   validateCreateCageInput,
   validateUpdateCageInput,
 } from "./cage.validation.js";
+
+import { findActiveAssignmentsByCageId } from "../cage_assignments/cageAssignment.repository.js";
 
 import crypto from "crypto";
 
@@ -159,7 +161,24 @@ async function getCageById(cageId) {
     throw error;
   }
 
-  return mapCage(cage);
+  const assignments = await findActiveAssignmentsByCageId(validCageId);
+
+  return {
+    ...mapCage(cage),
+
+    occupancy: assignments.length,
+
+    assignedAnimals: assignments.map((assignment) => ({
+      assignmentId: assignment.assignment_id,
+      animalId: assignment.animal_id,
+      animalCode: assignment.animal_code,
+      animalName: assignment.animal_name,
+      species: assignment.species,
+      sex: assignment.sex,
+      assignedAt: assignment.assigned_at,
+      reason: assignment.reason,
+    })),
+  };
 }
 
 async function updateCage(cageId, cageData, updatedBy) {

@@ -133,7 +133,7 @@ function validateUpdateCageInput(cageData) {
       typeof cageData.speciesGroup !== "string" ||
       !ALLOWED_SPECIES_GROUPS.includes(cageData.speciesGroup.toUpperCase())
     ) {
-      const error = new Error("Species group must be CAT, DOG, or MIXED");
+      const error = new Error("Species group must be CAT, DOG");
       error.statusCode = 400;
       throw error;
     }

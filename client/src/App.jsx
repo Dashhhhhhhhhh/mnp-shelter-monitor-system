@@ -8,6 +8,10 @@ import StaffDashboard from "./features/dashboard/pages/StaffDashboard";
 
 import StaffLayout from "./layouts/StaffLayout";
 
+import AnimalsPage from "./features/animals/pages/AnimalsPage";
+
+import CagesPage from "./features/cages/pages/CagesPage";
+
 function App() {
   return (
     <Routes>
@@ -24,6 +28,17 @@ function App() {
         }
       >
         <Route path="dashboard" element={<StaffDashboard />} />
+
+        <Route path="animals" element={<AnimalsPage />} />
+
+        <Route
+          path="/staff/cages"
+          element={
+            <ProtectedRoute>
+              <CagesPage />
+            </ProtectedRoute>
+          }
+        />
       </Route>
     </Routes>
   );

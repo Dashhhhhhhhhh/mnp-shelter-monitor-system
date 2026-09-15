@@ -1,0 +1,65 @@
+.move-animal-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgb(0 0 0 / 45%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 230;
+}
+
+.move-animal-modal {
+  width: min(440px, 92vw);
+  max-height: 90vh;
+  overflow-y: auto;
+  background: #fff;
+  color: #222;
+  border-radius: 10px;
+  padding: 1.5rem;
+  box-sizing: border-box;
+  box-shadow: 0 16px 40px rgb(0 0 0 / 25%);
+}
+
+.move-animal-modal-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1.25rem;
+}
+
+.move-animal-modal-header h2 {
+  margin: 0;
+  color: #222;
+}
+
+.move-animal-modal-header p {
+  margin: 0;
+  color: #555;
+}
+
+.move-animal-modal-header button {
+  border: 0;
+  background: transparent;
+  color: #222;
+  font-size: 1.1rem;
+  cursor: pointer;
+}
+
+.move-animal-modal form {
+  display: grid;
+  gap: 1rem;
+}
+
+.move-animal-modal label {
+  display: grid;
+  gap: 0.35rem;
+  color: #333;
+}
+
+.move-animal-modal select,
+.move-animal-modal input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 0.55rem;
+}

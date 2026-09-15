@@ -185,6 +185,31 @@ async function findAnimalCageHistory(animalId) {
   return result.rows;
 }
 
+async function findActiveAssignmentsByCageId(cageId, db = pool) {
+  const result = await db.query(
+    `SELECT
+      ca.assignment_id,
+      ca.animal_id,
+      a.animal_code,
+      a.animal_name,
+      a.species,
+      a.sex,
+      ca.cage_id,
+      ca.assigned_at,
+      ca.assigned_by,
+      ca.reason
+    FROM cage_assignments ca
+    JOIN animals a
+      ON a.animal_id = ca.animal_id
+    WHERE ca.cage_id = $1
+      AND ca.removed_at IS NULL
+    ORDER BY ca.assigned_at ASC`,
+    [cageId],
+  );
+
+  return result.rows;
+}
+
 export {
   findActiveAssignmentByAnimalId,
   findAssignmentById,
@@ -194,4 +219,5 @@ export {
   findCurrentAssignments,
   findAssignmentsByCageId,
   findAnimalCageHistory,
+  findActiveAssignmentsByCageId,
 };

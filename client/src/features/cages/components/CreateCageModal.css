@@ -1,0 +1,40 @@
+.create-cage-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgb(0 0 0 / 45%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 200;
+}
+
+.create-cage-modal {
+  width: min(480px, 92vw);
+  max-height: 90vh;
+  overflow-y: auto;
+  background: #fff;
+  color: #222;
+  border-radius: 10px;
+  padding: 1.5rem;
+  box-sizing: border-box;
+  box-shadow: 0 16px 40px rgb(0 0 0 / 25%);
+}
+
+.create-cage-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1.25rem;
+}
+
+.create-cage-modal-header h2 {
+  margin: 0;
+}
+
+.create-cage-modal-header button {
+  border: 0;
+  background: transparent;
+  font-size: 1.1rem;
+  cursor: pointer;
+}
