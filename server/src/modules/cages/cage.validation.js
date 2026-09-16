@@ -128,19 +128,6 @@ function validateUpdateCageInput(cageData) {
 
   const updates = {};
 
-  if (Object.prototype.hasOwnProperty.call(cageData, "speciesGroup")) {
-    if (
-      typeof cageData.speciesGroup !== "string" ||
-      !ALLOWED_SPECIES_GROUPS.includes(cageData.speciesGroup.toUpperCase())
-    ) {
-      const error = new Error("Species group must be CAT, DOG");
-      error.statusCode = 400;
-      throw error;
-    }
-
-    updates.speciesGroup = cageData.speciesGroup.toUpperCase();
-  }
-
   if (Object.prototype.hasOwnProperty.call(cageData, "genderGroup")) {
     if (
       typeof cageData.genderGroup !== "string" ||
