@@ -88,13 +88,13 @@ function AssignAnimalModal({ cage, onClose, onAssigned }) {
       }
       showToast("Animal assigned successfully");
 
+      onAssigned?.();
+
       onClose();
     } catch (error) {
       setSubmitError(
         error.response?.data?.message || "Unable to assign animal.",
       );
-
-      
     } finally {
       setSubmitting(false);
     }
