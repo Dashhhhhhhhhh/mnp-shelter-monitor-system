@@ -1,0 +1,109 @@
+.register-staff-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.65);
+
+  display: flex;
+  justify-content: center;
+  align-items: center;
+
+  z-index: 1000;
+}
+
+.register-staff-modal {
+  width: min(520px, 90vw);
+  max-height: 90vh;
+  overflow-y: auto;
+
+  background: #ffffff;
+  color: #1f1f1f;
+
+  border-radius: 12px;
+  padding: 24px;
+}
+
+.register-staff-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+
+  margin-bottom: 20px;
+}
+
+.register-staff-header h2 {
+  margin: 0;
+}
+
+.register-staff-header button {
+  border: none;
+  background: transparent;
+  font-size: 20px;
+  cursor: pointer;
+}
+
+.register-staff-modal form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.register-staff-modal label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+
+  font-weight: 600;
+}
+
+.register-staff-modal input,
+.register-staff-modal select {
+  padding: 10px 12px;
+  border: 1px solid #aaa;
+  border-radius: 6px;
+
+  font: inherit;
+}
+
+.register-staff-modal button[type="submit"] {
+  margin-top: 8px;
+  padding: 10px 14px;
+
+  cursor: pointer;
+}
+
+.register-staff-modal button[type="submit"]:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.form-error {
+  margin: 0;
+  color: #c62828;
+  text-align: center;
+}
+
+.register-staff-header h2 {
+  margin: 0;
+  color: #1f1f1f;
+}
+
+.register-staff-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+
+  color: #1f1f1f;
+}
+
+.register-staff-header > button {
+  background: transparent;
+  border: none;
+
+  color: #1f1f1f;
+  font-size: 22px;
+  font-weight: 700;
+
+  padding: 4px 8px;
+  cursor: pointer;
+}
