@@ -37,7 +37,7 @@ async function createUserService(userData) {
 
   const passwordHash = await bcrypt.hash(password, 10);
 
-  const user = await createUser({
+  const createdUser = await createUser({
     roleId: roleRecord.role_id,
     firstName,
     middleInitial,

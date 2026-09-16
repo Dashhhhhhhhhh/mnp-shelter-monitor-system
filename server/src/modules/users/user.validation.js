@@ -5,6 +5,34 @@ function validateCreateUserInput(userData) {
     throw error;
   }
 
+  const password = userData.password;
+
+  if (typeof password !== "string" || password.length < 10) {
+    const error = new Error("Password must be at least 10 characters");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  if (!/[A-Z]/.test(password)) {
+    const error = new Error(
+      "Password must contain at least one uppercase letter",
+    );
+    error.statusCode = 400;
+    throw error;
+  }
+
+  if (!/[0-9]/.test(password)) {
+    const error = new Error("Password must contain at least one number");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  if (!/[^A-Za-z0-9]/.test(password)) {
+    const error = new Error("Password must contain at least one symbol");
+    error.statusCode = 400;
+    throw error;
+  }
+
   const role =
     typeof userData.role === "string"
       ? userData.role.trim().toUpperCase()
@@ -12,6 +40,14 @@ function validateCreateUserInput(userData) {
 
   if (!role) {
     const error = new Error("Role is required");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  const allowedRoles = ["VOLUNTEER", "CARETAKER"];
+
+  if (!allowedRoles.includes(role)) {
+    const error = new Error("Role must be VOLUNTEER or CARETAKER");
     error.statusCode = 400;
     throw error;
   }
@@ -48,8 +84,6 @@ function validateCreateUserInput(userData) {
     error.statusCode = 400;
     throw error;
   }
-
-  const password = userData.password;
 
   const contactNumber =
     typeof userData.contactNumber === "string"
