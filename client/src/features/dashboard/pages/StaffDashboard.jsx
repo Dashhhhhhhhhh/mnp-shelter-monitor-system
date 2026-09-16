@@ -9,7 +9,7 @@ import RegisterStaffModal from "../../users/components/RegisterStaffModal";
 function StaffDashboard() {
   const navigate = useNavigate();
 
-  const { logout } = useAuth();
+  const { user, logut } = useAuth();
 
   const [isRegisterModalOpen, setIsRegisterModalOpen] = useState(false);
 
@@ -29,7 +29,9 @@ function StaffDashboard() {
 
       <button onClick={handleLogout}>Logout</button>
 
-      <button onClick={handleRegister}>Register Staff</button>
+      {user?.role === "ADMIN" && (
+        <button onClick={handleRegister}>Register Staff</button>
+      )}
 
       {isRegisterModalOpen && (
         <RegisterStaffModal onClose={() => setIsRegisterModalOpen(false)} />
