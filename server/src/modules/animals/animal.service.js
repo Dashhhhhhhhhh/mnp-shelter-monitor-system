@@ -15,6 +15,7 @@ import {
   validateAnimalListQuery,
   validateAnimalId,
   validateUpdateAnimalInput,
+  validateLifeStageAgainstBirthDate,
 } from "./animal.validation.js";
 
 import { findActiveAssignmentByAnimalId } from "../cage_assignments/cageAssignment.repository.js";
@@ -367,6 +368,15 @@ async function updateAnimal(animalId, animalData, updatedBy) {
     error.statusCode = 400;
     throw error;
   }
+
+  const finalSpecies = existingAnimal.species;
+
+  const finalLifestage = updates.lifeStage ?? existingAnimal.life_stage;
+  validateLifeStageAgainstBirthDate(
+    finalSpecies,
+    finalLifestage,
+    finalBirthDate,
+  );
 
   const updatedAnimal = await updateAnimalRecord(
     validAnimalId,

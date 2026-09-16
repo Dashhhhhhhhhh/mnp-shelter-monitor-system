@@ -1,5 +1,32 @@
 import { getCurrentManilaDate } from "../../utils/date.js";
 
+function validateLifeStageAgainstBirthDate(species, lifeStage, birthDate) {
+  const oneYearAgo = new Date();
+  oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
+
+  const parsedBirthDate = new Date(birthDate);
+
+  if (parsedBirthDate <= oneYearAgo) {
+    if (["PUPPY", "KITTEN"].includes(lifeStage)) {
+      const error = new Error(
+        "Animals 1 year or older cannot have life stage PUPPY or KITTEN",
+      );
+      error.statusCode = 400;
+      throw error;
+    }
+  }
+
+  if (parsedBirthDate > oneYearAgo) {
+    if (lifeStage === "ADULT") {
+      const error = new Error(
+        "Animals younger than 1 year cannot have life stage ADULT",
+      );
+      error.statusCode = 400;
+      throw error;
+    }
+  }
+}
+
 function validateCreateAnimalInput(animalData) {
   if (
     !animalData ||
@@ -203,6 +230,7 @@ function validateCreateAnimalInput(animalData) {
       throw error;
     }
   }
+  validateLifeStageAgainstBirthDate(species, lifeStage, birthDate);
 
   return {
     species,
@@ -592,9 +620,11 @@ function validateUpdateAnimalInput(animalData) {
 
   return updates;
 }
+
 export {
   validateCreateAnimalInput,
   validateAnimalListQuery,
   validateAnimalId,
   validateUpdateAnimalInput,
+  validateLifeStageAgainstBirthDate,
 };
