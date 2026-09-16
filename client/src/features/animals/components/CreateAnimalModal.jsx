@@ -4,7 +4,11 @@ import { useState } from "react";
 
 import { createAnimal } from "../api/animalApi";
 
+import { useToast } from "../../../components/feedback/ToastContext";
+
 function CreateAnimalModal({ onClose, onCreated }) {
+  const { showToast } = useToast();
+
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
 
@@ -46,6 +50,8 @@ function CreateAnimalModal({ onClose, onCreated }) {
       const data = await createAnimal(payload, idempotencyKey);
 
       onCreated?.(data.animal);
+      showToast("Animal created successfully");
+
       onClose();
     } catch (error) {
       console.error("Create animal error:", error);

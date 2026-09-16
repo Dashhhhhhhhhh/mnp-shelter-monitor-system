@@ -1,9 +1,13 @@
 import { useState } from "react";
 import { removeCageAssignment } from "../api/cageAssignmentApi";
 
+import { useToast } from "../../../components/feedback/ToastContext";
+
 import "./RemoveAnimalModal.css";
 
 function RemoveAnimalModal({ animal, onClose, onRemoved }) {
+  const { showToast } = useToast();
+
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
 
@@ -15,6 +19,9 @@ function RemoveAnimalModal({ animal, onClose, onRemoved }) {
       const data = await removeCageAssignment(animal.assignmentId);
 
       onRemoved?.(data.assignment);
+
+      showToast("Animal removed from cage successfully");
+
       onClose();
     } catch (error) {
       setError(

@@ -6,7 +6,11 @@ import { moveAnimal } from "../api/cageAssignmentApi";
 
 import "./MoveAnimalModal.css";
 
+import { useToast } from "../../../components/feedback/ToastContext";
+
 function MoveAnimalModal({ animal, currentCage, onClose, onMoved }) {
+  const { showToast } = useToast();
+
   const [cages, setCages] = useState([]);
 
   const [destinationCageId, setDestinationCageId] = useState("");
@@ -17,6 +21,9 @@ function MoveAnimalModal({ animal, currentCage, onClose, onMoved }) {
 
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState("");
+
+  const [warnings, setWarnings] = useState([]);
+  const [completedData, setCompletedData] = useState(null);
 
   useEffect(() => {
     async function fetchDestinationCages() {
@@ -62,7 +69,16 @@ function MoveAnimalModal({ animal, currentCage, onClose, onMoved }) {
 
       const data = await moveAnimal(animal.animalId, payload);
 
+      if (data.warnings?.length > 0) {
+        setWarnings(data.warnings);
+        setCompletedData(data);
+        return;
+      }
+
       onMoved?.(data);
+
+      showToast("Animal moved successfully");
+
       onClose();
     } catch (error) {
       setSubmitError(error.response?.data?.message || "Unable to move animal.");
@@ -70,8 +86,16 @@ function MoveAnimalModal({ animal, currentCage, onClose, onMoved }) {
       setSubmitting(false);
     }
   }
+
+  function handleModalClose() {
+    if (completedData) {
+      onMoved?.(completedData);
+    }
+
+    onClose();
+  }
   return (
-    <div className="move-animal-modal-backdrop" onClick={onClose}>
+    <div className="move-animal-modal-backdrop" onClick={handleModalClose}>
       <div
         className="move-animal-modal"
         onClick={(event) => event.stopPropagation()}
@@ -82,14 +106,10 @@ function MoveAnimalModal({ animal, currentCage, onClose, onMoved }) {
             <p>{animal.animalName || animal.animalCode}</p>
           </div>
 
-          <button type="button" onClick={onClose}>
+          <button type="button" onClick={handleModalClose}>
             ✕
           </button>
         </div>
-
-        {loading && <p>Loading cages...</p>}
-
-        {error && <p>{error}</p>}
 
         {!loading && !error && (
           <>
@@ -97,39 +117,60 @@ function MoveAnimalModal({ animal, currentCage, onClose, onMoved }) {
               Current cage: <strong>{currentCage.cageCode}</strong>
             </p>
 
-            <form onSubmit={handleSubmit}>
-              <label>
-                Destination cage
-                <select
-                  value={destinationCageId}
-                  onChange={(event) => setDestinationCageId(event.target.value)}
-                >
-                  <option value="">Select a cage</option>
+            {!loading &&
+              !error &&
+              (completedData ? (
+                <div className="move-warning">
+                  <h3>Move completed with warning</h3>
 
-                  {cages.map((cage) => (
-                    <option key={cage.cageId} value={cage.cageId}>
-                      {cage.cageCode} -{" "}
-                      {cage.location || "Location not specified"}
-                    </option>
+                  {warnings.map((warning) => (
+                    <p key={warning}>⚠ {warning}</p>
                   ))}
-                </select>
-              </label>
 
-              <label>
-                Reason
-                <input
-                  type="text"
-                  value={reason}
-                  onChange={(event) => setReason(event.target.value)}
-                  placeholder="Optional reason"
-                />
-              </label>
-              {submitError && <p>{submitError}</p>}
+                  <button type="button" onClick={handleModalClose}>
+                    Close
+                  </button>
+                </div>
+              ) : (
+                <form onSubmit={handleSubmit}>
+                  <label>
+                    Destination cage
+                    <select
+                      value={destinationCageId}
+                      onChange={(event) =>
+                        setDestinationCageId(event.target.value)
+                      }
+                    >
+                      <option value="">Select a cage</option>
 
-              <button type="submit" disabled={submitting || !destinationCageId}>
-                {submitting ? "Moving..." : "Move Animal"}
-              </button>
-            </form>
+                      {cages.map((cage) => (
+                        <option key={cage.cageId} value={cage.cageId}>
+                          {cage.cageCode} -{" "}
+                          {cage.location || "Location not specified"}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+
+                  <label>
+                    Reason
+                    <input
+                      type="text"
+                      value={reason}
+                      onChange={(event) => setReason(event.target.value)}
+                      placeholder="Optional reason"
+                    />
+                  </label>
+                  {submitError && <p>{submitError}</p>}
+
+                  <button
+                    type="submit"
+                    disabled={submitting || !destinationCageId}
+                  >
+                    {submitting ? "Moving..." : "Move Animal"}
+                  </button>
+                </form>
+              ))}
           </>
         )}
       </div>

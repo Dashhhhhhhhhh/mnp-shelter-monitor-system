@@ -3,7 +3,11 @@ import { createCage } from "../api/cageApi";
 
 import "./CreateCageModal.css";
 
+import { useToast } from "../../../components/feedback/ToastContext";
+
 function CreateCageModal({ onClose, onCreated }) {
+  const { showToast } = useToast();
+
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
 
@@ -34,9 +38,11 @@ function CreateCageModal({ onClose, onCreated }) {
 
     try {
       const data = await createCage(formData, idempotencyKey);
-      console.log("onCreated prop:", onCreated);
 
       onCreated?.(data.cage);
+
+      showToast("Cage created successfully");
+
       onClose();
     } catch (error) {
       setError(error.response?.data?.message || "Unable to create cage.");
@@ -47,11 +53,11 @@ function CreateCageModal({ onClose, onCreated }) {
 
   return (
     <div className="create-cage-modal-backdrop" onClick={onClose}>
-      <div className="create-cage-modal">
-        <div
-          className="create-cage-modal-header"
-          onClick={(event) => event.stopPropagation()}
-        >
+      <div
+        className="create-cage-modal"
+        onClick={(event) => event.stopPropagation()}
+      >
+        <div className="create-cage-modal-header">
           <h2>Add Cage</h2>
 
           <button

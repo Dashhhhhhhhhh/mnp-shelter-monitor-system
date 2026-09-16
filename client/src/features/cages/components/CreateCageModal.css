@@ -38,3 +38,19 @@
   font-size: 1.1rem;
   cursor: pointer;
 }
+
+.create-cage-modal {
+  color: #222;
+}
+
+.create-cage-modal-header h2 {
+  color: #222;
+}
+
+.create-cage-modal label {
+  color: #333;
+}
+
+.create-cage-modal-header button {
+  color: #222;
+}

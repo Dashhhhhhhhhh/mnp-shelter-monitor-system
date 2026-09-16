@@ -4,7 +4,11 @@ import { updateAnimal } from "../api/animalApi";
 
 import "./EditAnimalModal.css";
 
+import { useToast } from "../../../components/feedback/ToastContext";
+
 function EditAnimalModal({ animal, onClose, onUpdated }) {
+  const { showToast } = useToast();
+
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
 
@@ -42,6 +46,9 @@ function EditAnimalModal({ animal, onClose, onUpdated }) {
       const data = await updateAnimal(animal.animalId, payload);
 
       onUpdated(data.animal);
+
+      showToast("Animal updated successfully");
+
       onClose();
     } catch (error) {
       console.error("Edit animal error:", error);

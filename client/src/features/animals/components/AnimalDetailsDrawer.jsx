@@ -7,12 +7,16 @@ import EditAnimalModal from "./EditAnimalModal";
 
 import useAuth from "../../auth/hooks/useAuth";
 
+import { useToast } from "../../../components/feedback/ToastContext";
+
 function AnimalDetailsDrawer({
   animalId,
   onClose,
   onAnimalUpdated,
   onAnimalArchived,
 }) {
+  const { showToast } = useToast();
+
   const { user } = useAuth();
 
   const [animal, setAnimal] = useState(null);
@@ -81,12 +85,14 @@ function AnimalDetailsDrawer({
 
     try {
       await archiveAnimal(animal.animalId);
+      showToast("Animal archived successfully");
 
       onAnimalArchived?.();
     } catch (error) {
-      console.error("Archive animal error:", error);
-    } finally {
-      setArchiving(false);
+      const message =
+        error.response?.data?.message || "Unable to archive animal.";
+
+      showToast(message, "error");
     }
   }
 

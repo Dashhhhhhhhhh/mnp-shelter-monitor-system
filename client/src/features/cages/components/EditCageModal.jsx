@@ -3,12 +3,15 @@ import { updateCage } from "../api/cageApi";
 
 import "./EditCageModal.css";
 
+import { useToast } from "../../../components/feedback/ToastContext";
+
 function EditCageModal({ cage, onClose, onUpdated }) {
+  const { showToast } = useToast();
+
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
 
   const [formData, setFormData] = useState({
-    speciesGroup: cage.speciesGroup,
     genderGroup: cage.genderGroup,
     recommendedCapacity: cage.recommendedCapacity,
     cageType: cage.cageType,
@@ -33,6 +36,8 @@ function EditCageModal({ cage, onClose, onUpdated }) {
 
     try {
       const data = await updateCage(cage.cageId, formData);
+
+      showToast("Cage updated successfully");
 
       onUpdated?.(data.cage);
       onClose();
@@ -61,17 +66,6 @@ function EditCageModal({ cage, onClose, onUpdated }) {
         </div>
 
         <form onSubmit={handleSubmit}>
-          <label>
-            Species group
-            <select
-              name="speciesGroup"
-              value={formData.speciesGroup}
-              onChange={handleChange}
-            >
-              <option value="CAT">Cat</option>
-              <option value="DOG">Dog</option>
-            </select>
-          </label>
           <label>
             Gender group
             <select
