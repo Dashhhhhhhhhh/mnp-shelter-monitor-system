@@ -7,13 +7,6 @@ async function login(req, res, next) {
     const isProduction =
       process.env.NODE_ENV?.trim().toLowerCase() === "production";
 
-    console.log(
-      "Auth environment:",
-      JSON.stringify(process.env.NODE_ENV),
-      "SameSite:",
-      isProduction ? "none" : "lax",
-    );
-
     res.cookie("token", result.token, {
       httpOnly: true,
       secure: isProduction,
