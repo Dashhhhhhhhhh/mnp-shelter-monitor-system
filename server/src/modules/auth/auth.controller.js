@@ -4,10 +4,20 @@ async function login(req, res, next) {
   try {
     const result = await loginUser(req.body);
 
+    const isProduction =
+      process.env.NODE_ENV?.trim().toLowerCase() === "production";
+
+    console.log(
+      "Auth environment:",
+      JSON.stringify(process.env.NODE_ENV),
+      "SameSite:",
+      isProduction ? "none" : "lax",
+    );
+
     res.cookie("token", result.token, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+      secure: isProduction,
+      sameSite: isProduction ? "none" : "lax",
       maxAge: 24 * 60 * 60 * 1000,
     });
 
