@@ -1,6 +1,10 @@
 import { getCurrentManilaDate } from "../../utils/date.js";
 
 function validateLifeStageAgainstBirthDate(species, lifeStage, birthDate) {
+  if (!birthDate) {
+    return;
+  }
+
   const oneYearAgo = new Date();
   oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
 
