@@ -9,7 +9,7 @@ import RegisterStaffModal from "../../users/components/RegisterStaffModal";
 function StaffDashboard() {
   const navigate = useNavigate();
 
-  const { user, logut } = useAuth();
+  const { user, logout } = useAuth();
 
   const [isRegisterModalOpen, setIsRegisterModalOpen] = useState(false);
 
