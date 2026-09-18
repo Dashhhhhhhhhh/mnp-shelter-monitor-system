@@ -12,6 +12,8 @@ import AnimalsPage from "./features/animals/pages/AnimalsPage";
 
 import CagesPage from "./features/cages/pages/CagesPage";
 
+import CarePage from "./features/care/pages/CarePage.jsx";
+
 function App() {
   return (
     <Routes>
@@ -39,6 +41,7 @@ function App() {
             </ProtectedRoute>
           }
         />
+        <Route path="care" element={<CarePage />} />
       </Route>
     </Routes>
   );

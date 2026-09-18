@@ -1,0 +1,144 @@
+.schedule-care-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgb(0 0 0 / 50%);
+  z-index: 220;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  padding: 1rem;
+}
+
+.schedule-care-modal {
+  width: min(520px, 100%);
+  max-height: 90vh;
+  overflow-y: auto;
+
+  background: #fff;
+  color: #222;
+
+  border-radius: 12px;
+  padding: 1.5rem;
+  box-sizing: border-box;
+
+  box-shadow: 0 12px 40px rgb(0 0 0 / 20%);
+}
+
+.schedule-care-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+
+  margin-bottom: 1.5rem;
+}
+
+.schedule-care-modal-header h2 {
+  margin: 0;
+  color: #222;
+  font-size: 1.25rem;
+  font-weight: 600;
+}
+
+.schedule-care-modal-header button {
+  border: 0;
+  background: transparent;
+  color: #222;
+  font-size: 1.1rem;
+  cursor: pointer;
+}
+
+.schedule-care-form {
+  display: grid;
+  gap: 1rem;
+}
+
+.schedule-care-form label {
+  display: grid;
+  gap: 0.4rem;
+  font-weight: 600;
+}
+
+.schedule-care-form input,
+.schedule-care-form select,
+.schedule-care-form textarea {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 0.6rem 0.75rem;
+
+  font: inherit;
+}
+
+.schedule-care-form textarea {
+  min-height: 90px;
+  resize: vertical;
+}
+
+.schedule-care-error {
+  margin: 0;
+  color: #b42318;
+  font-weight: 600;
+}
+
+.schedule-care-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+  margin-top: 0.5rem;
+}
+
+.schedule-care-actions button {
+  padding: 0.6rem 0.9rem;
+  cursor: pointer;
+}
+
+.schedule-care-actions button:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+@media (max-width: 600px) {
+  .schedule-care-modal {
+    width: 100%;
+    max-height: 92vh;
+    padding: 1.25rem;
+  }
+
+  .schedule-care-actions {
+    flex-direction: column-reverse;
+  }
+
+  .schedule-care-actions button {
+    width: 100%;
+  }
+}
+
+@media (max-width: 600px) {
+  .schedule-care-modal-backdrop {
+    padding: 0.75rem;
+    align-items: center;
+  }
+
+  .schedule-care-modal {
+    width: 100%;
+    max-height: 92vh;
+    padding: 1.25rem;
+    border-radius: 10px;
+  }
+
+  .schedule-care-form input,
+  .schedule-care-form select,
+  .schedule-care-form textarea {
+    font-size: 16px;
+  }
+
+  .schedule-care-actions {
+    flex-direction: column-reverse;
+  }
+
+  .schedule-care-actions button {
+    width: 100%;
+  }
+}

@@ -6,4 +6,9 @@ async function createUser(userData) {
   return response.data;
 }
 
-export { createUser };
+async function getActiveStaff() {
+  const response = await apiClient.get("/users/staff");
+
+  return response.data;
+}
+export { createUser, getActiveStaff };

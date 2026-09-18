@@ -1,0 +1,53 @@
+.care-record-card {
+  padding: 1rem;
+  border: 1px solid #e5e5e5;
+  border-radius: 10px;
+
+  background: #ffffff;
+  color: #222222;
+
+  box-shadow: 0 4px 12px rgb(0 0 0 / 8%);
+}
+
+.care-record-card h3 {
+  margin: 0 0 0.75rem;
+  color: #222222;
+}
+
+.care-record-card p {
+  margin: 0.35rem 0;
+  line-height: 1.4;
+}
+
+.care-record-status {
+  font-weight: 600;
+}
+
+.care-record-status-overdue {
+  color: #b42318;
+}
+
+.care-record-status-completed {
+  color: #16803c;
+}
+
+.care-record-status-pending {
+  color: #8a6d1d;
+}
+
+.care-record-card button {
+  margin-top: 0.75rem;
+  padding: 0.55rem 0.85rem;
+
+  cursor: pointer;
+}
+
+@media (max-width: 600px) {
+  .care-record-card {
+    padding: 0.9rem;
+  }
+
+  .care-record-card button {
+    width: 100%;
+  }
+}
