@@ -283,7 +283,18 @@ async function getCareRecordsForCage(cageId) {
 
   const records = await findCareRecordsByCageId(validCageId);
 
-  return records.map(mapCareRecord);
+  const careRecordIds = records.map((record) => record.care_record_id);
+
+  const participants =
+    await findCareRecordParticipantsByRecordIds(careRecordIds);
+
+  return records.map((record) => {
+    const recordParticipants = participants.filter(
+      (participant) => participant.care_record_id === record.care_record_id,
+    );
+
+    return mapCareRecord(record, recordParticipants);
+  });
 }
 
 function getManilaDateTime() {
