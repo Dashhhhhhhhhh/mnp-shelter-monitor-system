@@ -9,21 +9,32 @@
   position: fixed;
   top: 0;
   right: 0;
-  width: min(440px, 90vw);
-  height: 100vh;
+
+  width: min(520px, 95vw);
+  height: 100dvh;
+
   background: #fff;
   color: #222;
+
   z-index: 100;
+
   overflow-y: auto;
-  padding: 1.5rem;
+  overflow-x: hidden;
+
+  padding: 1.75rem;
   box-sizing: border-box;
+
+  box-shadow: -8px 0 24px rgb(0 0 0 / 12%);
 }
+
+/* HEADER */
 
 .animal-drawer-header {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
   gap: 1rem;
+
   margin-bottom: 1.5rem;
 }
 
@@ -32,81 +43,52 @@
   margin: 0;
 }
 
-.animal-drawer-content {
-  display: grid;
-  grid-template-columns: 140px 1fr;
-  gap: 1.25rem;
-  align-items: start;
-}
-
-.animal-photo-placeholder {
-  aspect-ratio: 1;
-  display: grid;
-  place-items: center;
-  border: 1px solid #ddd;
-  border-radius: 12px;
-  background: #f3f3f3;
-  text-align: center;
-}
-
-@media (max-width: 600px) {
-  .animal-drawer {
-    width: 100%;
-  }
-
-  .animal-drawer-content {
-    grid-template-columns: 1fr;
-  }
-
-  .animal-photo-placeholder {
-    width: min(220px, 100%);
-    margin-inline: auto;
-  }
-}
-
-.animal-drawer {
-  box-shadow: -8px 0 24px rgb(0 0 0 / 12%);
-}
-
-.animal-drawer-header button {
-  border: 0;
-  background: transparent;
+.animal-drawer-header h2 {
+  color: #222;
   font-size: 1.25rem;
+  font-weight: 600;
+}
+
+.animal-drawer-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+
+  flex-shrink: 0;
+}
+
+/* EDIT BUTTON */
+
+.animal-drawer-edit {
+  border: 1px solid #ddd;
+  border-radius: 6px;
+
+  background: #fff;
+  color: #222;
+
+  padding: 0.4rem 0.75rem;
+
   cursor: pointer;
-  padding: 0.25rem;
 }
 
-.animal-drawer-content p {
-  margin: 0 0 0.75rem;
+.animal-drawer-edit:hover {
+  background: #f3f3f3;
 }
 
-.animal-details p {
-  margin: 0 0 0.75rem;
-  line-height: 1.4;
-}
-
-.animal-details strong {
-  font-weight: 600;
-}
-
-.animal-status-badge {
-  display: inline-block;
-  padding: 0.2rem 0.5rem;
-  border-radius: 999px;
-  background: #f0f0f0;
-  font-size: 0.8rem;
-  font-weight: 600;
-}
+/* CLOSE BUTTON */
 
 .animal-drawer-close {
   flex-shrink: 0;
+
   width: 36px;
   height: 36px;
+
   display: grid;
   place-items: center;
 
   border: 1px solid #ddd;
   border-radius: 50%;
+
   background: #fff;
   color: #222;
 
@@ -116,6 +98,78 @@
 
 .animal-drawer-close:hover {
   background: #f3f3f3;
+}
+
+/* MAIN CONTENT */
+
+.animal-drawer-content {
+  display: grid;
+  grid-template-columns: 140px 1fr;
+  gap: 1.25rem;
+
+  align-items: start;
+}
+
+.animal-photo-placeholder {
+  width: 100%;
+  aspect-ratio: 1;
+
+  display: grid;
+  place-items: center;
+
+  border: 1px solid #ddd;
+  border-radius: 12px;
+
+  background: #f3f3f3;
+  color: #222;
+
+  text-align: center;
+}
+
+/* DETAILS */
+
+.animal-details p,
+.animal-drawer-content p {
+  margin: 0 0 0.75rem;
+  line-height: 1.5;
+}
+
+.animal-details strong {
+  font-weight: 600;
+}
+
+.animal-details-section {
+  margin-bottom: 1.75rem;
+}
+
+.animal-details-section h3 {
+  margin: 0 0 1rem;
+
+  padding-bottom: 0.6rem;
+
+  font-size: 1rem;
+
+  border-bottom: 1px solid #eee;
+}
+
+.animal-details-section p {
+  margin: 0 0 0.8rem;
+  line-height: 1.5;
+}
+
+/* STATUS BADGES */
+
+.animal-status-badge {
+  display: inline-block;
+
+  padding: 0.2rem 0.5rem;
+
+  border-radius: 999px;
+
+  background: #f0f0f0;
+
+  font-size: 0.8rem;
+  font-weight: 600;
 }
 
 .animal-status-badge.healthy,
@@ -143,7 +197,7 @@
 }
 
 .animal-status-badge.not-ready {
-  background: #eeeeee;
+  background: #eee;
   color: #555;
 }
 
@@ -152,84 +206,48 @@
   color: #7b1fa2;
 }
 
-.animal-details-section {
-  margin-bottom: 1.5rem;
-}
-
-.animal-details-section h3 {
-  margin: 0 0 1rem;
-  font-size: 1rem;
-  border-bottom: 1px solid #eee;
-  padding-bottom: 0.5rem;
-}
-
-.animal-drawer-actions {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-}
-
-.animal-drawer-header h2 {
-  color: #222;
-  font-size: 1.25rem;
-  font-weight: 600;
-}
-
-.animal-drawer-edit {
-  border: 1px solid #ddd;
-  border-radius: 6px;
-  background: #fff;
-  color: #222;
-  padding: 0.4rem 0.75rem;
-  cursor: pointer;
-}
-
-.animal-drawer-edit:hover {
-  background: #f3f3f3;
-}
-
-.animal-drawer {
-  position: fixed;
-  top: 0;
-  right: 0;
-
-  width: min(520px, 95vw);
-  height: 100vh;
-
-  background: #fff;
-  color: #222;
-  z-index: 100;
-
-  overflow-y: auto;
-  padding: 1.75rem;
-  box-sizing: border-box;
-
-  box-shadow: -8px 0 24px rgb(0 0 0 / 12%);
-}
-
-.animal-details-section {
-  margin-bottom: 1.75rem;
-}
-
-.animal-details-section h3 {
-  margin: 0 0 1rem;
-  padding-bottom: 0.6rem;
-
-  font-size: 1rem;
-  border-bottom: 1px solid #eee;
-}
-
-.animal-details-section p {
-  margin: 0 0 0.8rem;
-  line-height: 1.5;
-}
+/* MOBILE */
 
 @media (max-width: 600px) {
   .animal-drawer {
     width: 100%;
+    max-width: none;
+
+    height: 100dvh;
+
+    padding: 1rem;
+  }
+
+  .animal-drawer-header {
+    align-items: center;
+    gap: 0.75rem;
+  }
+
+  .animal-drawer-actions {
+    flex-wrap: wrap;
+    justify-content: flex-end;
   }
 
   .animal-drawer-content {
     grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+
+  .animal-photo-placeholder {
+    width: min(220px, 100%);
+    margin-inline: auto;
+  }
+
+  .animal-details-section {
+    margin-bottom: 1.25rem;
+  }
+
+  .animal-drawer-edit {
+    padding: 0.45rem 0.7rem;
+  }
+
+  .animal-drawer-close {
+    width: 34px;
+    height: 34px;
   }
 }
