@@ -1,5 +1,8 @@
 import { useEffect, useState } from "react";
+
 import { getCageById } from "../api/cageApi";
+
+import { getCareRecordsForCage } from "../../care/api/careApi";
 
 import EditCageModal from "./EditCageModal";
 
@@ -32,6 +35,11 @@ function CageDetailsDrawer({
   const [movingAnimal, setMovingAnimal] = useState(null);
 
   const [removingAnimal, setRemovingAnimal] = useState(null);
+
+  const [careRecords, setCareRecords] = useState([]);
+  const [loadingCareRecords, setLoadingCareRecords] = useState(false);
+  const [careRecordsError, setCareRecordsError] = useState("");
+
   useEffect(() => {
     if (!cageId) return;
 
@@ -54,6 +62,29 @@ function CageDetailsDrawer({
 
     fetchCage();
   }, [cageId, refreshKey]);
+
+  useEffect(() => {
+    if (!cageId) return;
+
+    async function fetchCareRecords() {
+      setLoadingCareRecords(true);
+      setCareRecordsError("");
+
+      try {
+        const data = await getCareRecordsForCage(cageId);
+
+        setCareRecords(data.careRecords);
+      } catch (error) {
+        setCareRecordsError(
+          error.response?.data?.message || "Unable to load care history.",
+        );
+      } finally {
+        setLoadingCareRecords(false);
+      }
+    }
+
+    fetchCareRecords();
+  }, [cageId]);
 
   if (!cageId) return null;
 
@@ -146,6 +177,94 @@ function CageDetailsDrawer({
                       <strong>Reason:</strong>{" "}
                       {animal.reason || "Not specified"}
                     </p>
+
+                    <section className="cage-details-section">
+                      <h3>Care History</h3>
+
+                      {loadingCareRecords && <p>Loading care history...</p>}
+
+                      {careRecordsError && <p>{careRecordsError}</p>}
+
+                      {!loadingCareRecords &&
+                        !careRecordsError &&
+                        careRecords.length === 0 && (
+                          <p>No care records for this cage.</p>
+                        )}
+
+                      {!loadingCareRecords &&
+                        !careRecordsError &&
+                        careRecords.length > 0 && (
+                          <div className="cage-care-history">
+                            {careRecords.map((record) => (
+                              <div
+                                key={record.careRecordId}
+                                className="cage-care-history-item"
+                              >
+                                <div className="cage-care-history-header">
+                                  <strong>
+                                    {record.careDate} · {record.carePeriod}
+                                  </strong>
+
+                                  <span
+                                    className={`cage-care-status ${
+                                      record.isOverdue
+                                        ? "cage-care-status-overdue"
+                                        : record.status === "COMPLETED"
+                                          ? "cage-care-status-completed"
+                                          : "cage-care-status-pending"
+                                    }`}
+                                  >
+                                    {record.isOverdue
+                                      ? "OVERDUE"
+                                      : record.status}
+                                  </span>
+                                </div>
+
+                                <p>
+                                  {record.careType}
+                                  {record.cleaningType
+                                    ? ` · ${record.cleaningType}`
+                                    : ""}
+                                </p>
+
+                                {record.participants?.length > 0 && (
+                                  <p>
+                                    <strong>Performed by:</strong>{" "}
+                                    {record.participants
+                                      .map((participant) => {
+                                        const middleInitial =
+                                          participant.middleInitial
+                                            ? `${participant.middleInitial}. `
+                                            : "";
+
+                                        return `${participant.firstName} ${middleInitial}${participant.lastName}`;
+                                      })
+                                      .join(", ")}
+                                  </p>
+                                )}
+
+                                {record.notes && (
+                                  <p>
+                                    <strong>Notes:</strong> {record.notes}
+                                  </p>
+                                )}
+
+                                {record.status === "COMPLETED" &&
+                                  record.completedAt && (
+                                    <p>
+                                      <strong>Completed:</strong>{" "}
+                                      {new Date(
+                                        record.completedAt,
+                                      ).toLocaleString("en-PH", {
+                                        timeZone: "Asia/Manila",
+                                      })}
+                                    </p>
+                                  )}
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                    </section>
 
                     <button
                       type="button"

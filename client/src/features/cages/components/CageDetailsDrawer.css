@@ -108,3 +108,59 @@
 .cage-drawer-header button {
   color: #222;
 }
+
+.cage-care-history {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.cage-care-history-item {
+  padding: 0.9rem;
+  border: 1px solid #e5e5e5;
+  border-radius: 8px;
+
+  background: #fafafa;
+}
+
+.cage-care-history-item p {
+  margin: 0.35rem 0;
+  line-height: 1.4;
+}
+
+.cage-care-history-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+
+  margin-bottom: 0.5rem;
+}
+
+.cage-care-status {
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.cage-care-status-overdue {
+  color: #b42318;
+}
+
+.cage-care-status-completed {
+  color: #16803c;
+}
+
+.cage-care-status-pending {
+  color: #8a6d1d;
+}
+
+@media (max-width: 600px) {
+  .cage-care-history-header {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 0.35rem;
+  }
+
+  .cage-care-history-item {
+    padding: 0.8rem;
+  }
+}
