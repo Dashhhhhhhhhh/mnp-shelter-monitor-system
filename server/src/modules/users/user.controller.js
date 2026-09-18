@@ -1,4 +1,4 @@
-import { createUserService } from "./user.service.js";
+import { createUserService, getActiveStaffService } from "./user.service.js";
 
 async function createUserController(req, res, next) {
   try {
@@ -12,4 +12,17 @@ async function createUserController(req, res, next) {
   }
 }
 
-export { createUserController };
+async function getActiveStaffController(req, res, next) {
+  try {
+    const staff = await getActiveStaffService();
+
+    return res.status(200).json({
+      success: true,
+      staff,
+    });
+  } catch (error) {
+    next(error);
+  }
+}
+
+export { createUserController, getActiveStaffController };

@@ -95,4 +95,33 @@ async function createUser({
   return result.rows[0];
 }
 
-export { findUserByEmail, findUserById, findRoleByName, createUser };
+async function findActiveStaff() {
+  const result = await pool.query(
+    `
+      SELECT
+        u.user_id,
+        u.first_name,
+        u.middle_initial,
+        u.last_name,
+        r.role_name
+      FROM users u
+      JOIN roles r
+        ON r.role_id = u.role_id
+      WHERE u.is_active = TRUE
+        AND r.role_name IN ('ADMIN', 'VOLUNTEER', 'CARETAKER')
+      ORDER BY
+        u.last_name ASC,
+        u.first_name ASC
+    `,
+  );
+
+  return result.rows;
+}
+
+export {
+  findUserByEmail,
+  findUserById,
+  findRoleByName,
+  createUser,
+  findActiveStaff,
+};

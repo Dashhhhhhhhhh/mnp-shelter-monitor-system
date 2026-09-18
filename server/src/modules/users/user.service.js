@@ -5,6 +5,7 @@ import {
   findUserByEmail,
   createUser,
   findUserById,
+  findActiveStaff,
 } from "./user.repository.js";
 import { validateCreateUserInput } from "./user.validation.js";
 
@@ -59,4 +60,16 @@ async function createUserService(userData) {
   };
 }
 
-export { createUserService };
+async function getActiveStaffService() {
+  const staff = await findActiveStaff();
+
+  return staff.map((user) => ({
+    userId: user.user_id,
+    firstName: user.first_name,
+    middleInitial: user.middle_initial,
+    lastName: user.last_name,
+    role: user.role_name,
+  }));
+}
+
+export { createUserService, getActiveStaffService };
