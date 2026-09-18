@@ -308,6 +308,36 @@ async function findUsersByIds(userIds, db = pool) {
   return result.rows;
 }
 
+async function findCareRecordParticipantsByRecordIds(careRecordIds, db = pool) {
+  if (careRecordIds.length === 0) {
+    return [];
+  }
+
+  const result = await db.query(
+    `
+      SELECT
+        crp.care_record_participant_id,
+        crp.care_record_id,
+        crp.user_id,
+        u.first_name,
+        u.middle_initial,
+        u.last_name,
+        u.role_id,
+        crp.created_at
+      FROM care_record_participants crp
+      JOIN users u
+        ON u.user_id = crp.user_id
+      WHERE crp.care_record_id = ANY($1::uuid[])
+      ORDER BY
+        u.last_name ASC,
+        u.first_name ASC
+    `,
+    [careRecordIds],
+  );
+
+  return result.rows;
+}
+
 export {
   findCareRecordById,
   findScheduledCareRecord,
@@ -318,4 +348,5 @@ export {
   findCareRecordsByDate,
   findCareRecordsByCageId,
   findUsersByIds,
+  findCareRecordParticipantsByRecordIds,
 };

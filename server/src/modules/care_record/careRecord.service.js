@@ -10,6 +10,7 @@ import {
   findCareRecordsByDate,
   findCareRecordsByCageId,
   findUsersByIds,
+  findCareRecordParticipantsByRecordIds,
 } from "./careRecord.repository.js";
 
 import {
@@ -24,7 +25,7 @@ import { findCageById } from "../cages/cage.repository.js";
 
 const ALLOWED_PARTICIPANT_ROLES = ["ADMIN", "VOLUNTEER", "CARETAKER"];
 
-function mapCareRecord(record) {
+function mapCareRecord(record, participants = []) {
   return {
     careRecordId: record.care_record_id,
     cageId: record.cage_id,
@@ -53,6 +54,8 @@ function mapCareRecord(record) {
     updatedBy: record.updated_by,
     createdAt: record.created_at,
     updatedAt: record.updated_at,
+
+    participants: participants.map(mapParticipant),
   };
 }
 function mapParticipant(participant) {
@@ -340,7 +343,18 @@ async function getCareRecordsByDate(careDate) {
 
   const records = await findCareRecordsByDate(validCareDate);
 
-  return records.map(mapCareRecord);
+  const careRecordIds = records.map((record) => record.care_record_id);
+
+  const participants =
+    await findCareRecordParticipantsByRecordIds(careRecordIds);
+
+  return records.map((record) => {
+    const recordParticipants = participants.filter(
+      (participant) => participant.care_record_id === record.care_record_id,
+    );
+
+    return mapCareRecord(record, recordParticipants);
+  });
 }
 
 export {
