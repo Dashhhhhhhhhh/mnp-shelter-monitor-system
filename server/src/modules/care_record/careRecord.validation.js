@@ -154,9 +154,49 @@ function validateCreateCareRecordInput(data) {
   };
 }
 
+function validateParticipantUserIds(participantUserIds) {
+  if (!Array.isArray(participantUserIds)) {
+    const error = new Error("participantUserIds must be an array");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  if (participantUserIds.length === 0) {
+    const error = new Error("At least one care participant is required");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  const validatedIds = participantUserIds.map((id) =>
+    validateUuid(id, "participant user ID"),
+  );
+
+  return [...new Set(validatedIds)];
+}
+
+function validateCompleteCareRecordInput(data) {
+  if (!data || typeof data !== "object" || Array.isArray(data)) {
+    const error = new Error("Care record input data must be an object");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  const { participantUserIds, notes } = data;
+
+  const validatedParticipantUserIds =
+    validateParticipantUserIds(participantUserIds);
+
+  return {
+    participantUserIds: validatedParticipantUserIds,
+
+    notes: validateNotes(notes),
+  };
+}
+
 export {
   validateCareRecordId,
   validateCageId,
   validateCreateCareRecordInput,
   validateCareDate,
+  validateCompleteCareRecordInput,
 };

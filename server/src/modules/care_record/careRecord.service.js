@@ -17,6 +17,7 @@ import {
   validateCageId,
   validateCareDate,
   validateCreateCareRecordInput,
+  validateCompleteCareRecordInput,
 } from "./careRecord.validation.js";
 
 import { findCageById } from "../cages/cage.repository.js";
