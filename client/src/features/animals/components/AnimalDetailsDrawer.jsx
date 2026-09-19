@@ -9,6 +9,8 @@ import useAuth from "../../auth/hooks/useAuth";
 
 import { useToast } from "../../../components/feedback/ToastContext";
 
+import AnimalMedicalHistory from "../../medical/components/AnimalMedicalHistory";
+
 function AnimalDetailsDrawer({
   animalId,
   onClose,
@@ -298,6 +300,13 @@ function AnimalDetailsDrawer({
                   <p>No intake information recorded.</p>
                 )}
               </section>
+
+              <section className="animal-details-section">
+                <h3>Medical History</h3>
+
+                <AnimalMedicalHistory animalId={animal.animalId} />
+              </section>
+
               <section className="animal-details-section">
                 <h3>Record Information</h3>
 

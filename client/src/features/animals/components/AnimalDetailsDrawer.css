@@ -7,11 +7,13 @@
 
 .animal-drawer {
   position: fixed;
-  top: 0;
-  right: 0;
 
-  width: min(520px, 95vw);
-  height: 100dvh;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+
+  width: min(720px, 95vw);
+  max-height: 92dvh;
 
   background: #fff;
   color: #222;
@@ -24,7 +26,9 @@
   padding: 1.75rem;
   box-sizing: border-box;
 
-  box-shadow: -8px 0 24px rgb(0 0 0 / 12%);
+  border-radius: 12px;
+
+  box-shadow: 0 12px 40px rgb(0 0 0 / 20%);
 }
 
 /* HEADER */
@@ -138,8 +142,20 @@
   font-weight: 600;
 }
 
+.animal-details {
+  display: grid;
+  gap: 1rem;
+}
+
 .animal-details-section {
-  margin-bottom: 1.75rem;
+  padding: 1rem;
+
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+
+  background: #f8fafc;
+
+  margin-bottom: 0;
 }
 
 .animal-details-section h3 {
@@ -147,14 +163,58 @@
 
   padding-bottom: 0.6rem;
 
-  font-size: 1rem;
+  border-bottom: 1px solid #dbe3ec;
 
-  border-bottom: 1px solid #eee;
+  color: #1e3a5f;
+
+  font-size: 1rem;
+  font-weight: 700;
 }
 
 .animal-details-section p {
-  margin: 0 0 0.8rem;
+  margin: 0 0 0.7rem;
+
+  color: #475569;
+
   line-height: 1.5;
+}
+
+.animal-details-section strong {
+  color: #1f2937;
+  font-weight: 600;
+}
+
+.animal-medical-history {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.animal-medical-history-item {
+  padding: 0.9rem;
+
+  border: 1px solid #dbe5ef;
+  border-left: 4px solid #3b82f6;
+  border-radius: 8px;
+
+  background: #fff;
+}
+
+.animal-medical-history-item p {
+  margin: 0.35rem 0;
+
+  color: #475569;
+
+  line-height: 1.4;
+}
+
+.animal-medical-history-item p:first-child {
+  margin-top: 0;
+  margin-bottom: 0.65rem;
+
+  color: #1d4ed8;
+
+  font-size: 0.85rem;
+  font-weight: 700;
 }
 
 /* STATUS BADGES */
