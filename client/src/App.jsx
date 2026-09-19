@@ -14,6 +14,8 @@ import CagesPage from "./features/cages/pages/CagesPage";
 
 import CarePage from "./features/care/pages/CarePage.jsx";
 
+import MedicalPage from "./features/medical/pages/MedicalPage";
+
 function App() {
   return (
     <Routes>
@@ -42,6 +44,8 @@ function App() {
           }
         />
         <Route path="care" element={<CarePage />} />
+
+        <Route path="medical" element={<MedicalPage />} />
       </Route>
     </Routes>
   );

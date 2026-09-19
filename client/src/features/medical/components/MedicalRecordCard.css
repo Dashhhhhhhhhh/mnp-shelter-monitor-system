@@ -1,0 +1,58 @@
+.medical-record-card {
+  padding: 1rem;
+  border: 1px solid #e5e5e5;
+  border-radius: 10px;
+
+  background: #fff;
+  color: #222;
+
+  box-shadow: 0 4px 12px rgb(0 0 0 / 8%);
+}
+
+.medical-record-card-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+
+  margin-bottom: 1rem;
+}
+
+.medical-record-card-header h3 {
+  margin: 0;
+  color: #222;
+}
+
+.medical-record-animal-code {
+  margin: 0.25rem 0 0;
+  color: #666;
+  font-size: 0.9rem;
+}
+
+.medical-record-type {
+  padding: 0.25rem 0.55rem;
+
+  border-radius: 999px;
+
+  background: #eee;
+  color: #333;
+
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.medical-record-card p {
+  margin: 0.4rem 0;
+  line-height: 1.45;
+}
+
+@media (max-width: 600px) {
+  .medical-record-card {
+    padding: 0.9rem;
+  }
+
+  .medical-record-card-header {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+}
