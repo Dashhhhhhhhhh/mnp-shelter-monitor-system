@@ -162,8 +162,8 @@ function CreateAnimalModal({ onClose, onCreated }) {
                 })
               }
             >
-              <option value="MALE">FEMALE</option>
-              <option value="FEMALE">MALE</option>
+              <option value="MALE">MALE</option>
+              <option value="FEMALE">FEMALE</option>
             </select>
           </label>
 

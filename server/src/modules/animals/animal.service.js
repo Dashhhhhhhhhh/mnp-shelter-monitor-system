@@ -408,6 +408,18 @@ async function updateAnimal(animalId, animalData, updatedBy) {
 async function archiveAnimal(animalId, archivedBy) {
   const validAnimalId = validateAnimalId(animalId);
 
+  const activeAssignment = await findActiveAssignmentByAnimalId(validAnimalId);
+
+  if (activeAssignment) {
+    const error = new Error(
+      "Animal must be removed from its cage before it can be archived",
+    );
+
+    error.statusCode = 409;
+
+    throw error;
+  }
+
   const archivedAnimal = await archiveAnimalRecord(validAnimalId, archivedBy);
 
   if (!archivedAnimal) {
