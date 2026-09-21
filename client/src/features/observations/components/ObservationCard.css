@@ -1,0 +1,74 @@
+.observation-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 1rem;
+  box-shadow: 0 2px 8px rgb(0 0 0 / 8%);
+}
+
+.observation-card h3 {
+  margin: 0 0 0.5rem;
+  color: #1f2937;
+  font-size: 1.1rem;
+}
+
+.observation-card p {
+  margin: 0;
+  color: #64748b;
+}
+
+.observation-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.observation-urgency,
+.observation-status {
+  display: inline-block;
+  padding: 0.3rem 0.6rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.observation-urgency.urgent {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.observation-urgency.needs_attention {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.observation-urgency.normal {
+  background: #e2e8f0;
+  color: #334155;
+}
+
+.observation-status.new {
+  background: #dbeafe;
+  color: #1d4ed8;
+}
+
+.observation-status.being_handled {
+  background: #ede9fe;
+  color: #6d28d9;
+}
+
+.observation-status.monitoring {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.observation-status.resolved {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.observation-status.escalated_to_medical {
+  background: #fee2e2;
+  color: #991b1b;
+}

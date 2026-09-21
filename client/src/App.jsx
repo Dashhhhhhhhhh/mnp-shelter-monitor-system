@@ -16,6 +16,8 @@ import CarePage from "./features/care/pages/CarePage.jsx";
 
 import MedicalPage from "./features/medical/pages/MedicalPage";
 
+import ObservationsPage from "./features/observations/pages/ObservationsPage.jsx";
+
 function App() {
   return (
     <Routes>
@@ -32,9 +34,7 @@ function App() {
         }
       >
         <Route path="dashboard" element={<StaffDashboard />} />
-
         <Route path="animals" element={<AnimalsPage />} />
-
         <Route
           path="/staff/cages"
           element={
@@ -46,6 +46,15 @@ function App() {
         <Route path="care" element={<CarePage />} />
 
         <Route path="medical" element={<MedicalPage />} />
+        
+        <Route
+          path="/staff/observations"
+          element={
+            <ProtectedRoute>
+              <ObservationsPage />
+            </ProtectedRoute>
+          }
+        />
       </Route>
     </Routes>
   );

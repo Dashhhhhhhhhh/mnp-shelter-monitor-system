@@ -14,6 +14,7 @@ function StaffLayout() {
           <NavLink to="/staff/cages">Cages</NavLink>
           <NavLink to="/staff/care">Care</NavLink>
           <NavLink to="/staff/medical">Medical</NavLink>
+          <NavLink to="/staff/observations">Observations</NavLink>
           <NavLink to="/staff/inventory">Inventory</NavLink>
           <NavLink to="/staff/finance">Finance</NavLink>
         </nav>
