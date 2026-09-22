@@ -1,0 +1,124 @@
+.observation-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.65);
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  padding: 1rem;
+  z-index: 1000;
+  overflow-y: auto;
+}
+
+.observation-modal {
+  width: 100%;
+  max-width: 520px;
+  max-height: calc(100vh - 2rem);
+  overflow-y: auto;
+
+  background: #ffffff;
+  color: #1f2937;
+
+  border-radius: 12px;
+  padding: 1.5rem;
+  box-sizing: border-box;
+}
+
+.observation-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  margin-bottom: 1.25rem;
+}
+
+.observation-modal-header h2 {
+  margin: 0;
+}
+
+.observation-modal-header button {
+  border: none;
+  background: transparent;
+  font-size: 1.5rem;
+  cursor: pointer;
+}
+
+.observation-modal form {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.observation-modal label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+
+  font-weight: 600;
+}
+
+.observation-modal select,
+.observation-modal textarea {
+  width: 100%;
+  padding: 0.65rem;
+
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+
+  background: #ffffff;
+  color: #1f2937;
+}
+
+.observation-modal textarea {
+  min-height: 100px;
+  resize: vertical;
+}
+
+.observation-modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+
+  margin-top: 0.5rem;
+}
+
+.observation-modal-actions button {
+  padding: 0.65rem 1rem;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.observation-modal-actions button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+@media (max-width: 600px) {
+  .observation-modal {
+    padding: 1rem;
+  }
+
+  .observation-modal-actions {
+    flex-direction: column-reverse;
+  }
+
+  .observation-modal-actions button {
+    width: 100%;
+  }
+}
+
+.observation-modal-header h2 {
+  margin: 0;
+  color: #1f2937;
+}
+
+.observation-modal-header button {
+  border: none;
+  background: transparent;
+  color: #1f2937;
+  font-size: 1.5rem;
+  cursor: pointer;
+}

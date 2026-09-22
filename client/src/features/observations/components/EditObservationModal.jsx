@@ -1,33 +1,26 @@
 import { useEffect, useState } from "react";
+import { updateObservation } from "../api/observationApi";
 
-import { getAnimals } from "../../animals/api/animalApi";
 import { getCages, getCageById } from "../../cages/api/cageApi";
-
-import { createObservation } from "../api/observationApi";
-
-import { useToast } from "../../../components/feedback/ToastContext";
 
 import "./ObservationModal.css";
 
-function CreateObservationModal({ onClose, onCreated }) {
-  const { showToast } = useToast();
+function EditObservationModal({ observation, onClose, onUpdated }) {
+  const [cages, setCages] = useState([]);
+  const [animals, setAnimals] = useState([]);
+
+  const [loadingOptions, setLoadingOptions] = useState(true);
+  const [loadingAnimals, setLoadingAnimals] = useState(false);
 
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
 
-  const [cages, setCages] = useState([]);
-  const [animals, setAnimals] = useState([]);
-  const [loadingOptions, setLoadingOptions] = useState(true);
-
-  const [loadingAnimals, setLoadingAnimals] = useState(false);
-
   const [formData, setFormData] = useState({
-    cageId: "",
-    animalId: "",
-    observationType: "",
-    urgency: "NORMAL",
-    notes: "",
-    photo: null,
+    cageId: observation.cageId || "",
+    animalId: observation.animalId || "",
+    observationType: observation.observationType || "",
+    urgency: observation.urgency || "NORMAL",
+    notes: observation.notes || "",
   });
 
   function handleChange(event) {
@@ -52,19 +45,15 @@ function CreateObservationModal({ onClose, onCreated }) {
         observationType: formData.observationType,
         urgency: formData.urgency,
         notes: formData.notes || null,
-        photo: null,
       };
 
-      const data = await createObservation(payload);
+      const data = await updateObservation(observation.observationId, payload);
 
-      onCreated?.(data.observation);
-
-      showToast("Observation created successfully");
-
+      onUpdated?.(data.observation);
       onClose();
     } catch (error) {
       setError(
-        error.response?.data?.message || "Unable to create observation.",
+        error.response?.data?.message || "Unable to update observation.",
       );
     } finally {
       setSubmitting(false);
@@ -91,12 +80,6 @@ function CreateObservationModal({ onClose, onCreated }) {
     async function fetchCageAnimals() {
       if (!formData.cageId) {
         setAnimals([]);
-
-        setFormData((current) => ({
-          ...current,
-          animalId: "",
-        }));
-
         return;
       }
 
@@ -105,12 +88,20 @@ function CreateObservationModal({ onClose, onCreated }) {
 
         const data = await getCageById(formData.cageId);
 
-        setAnimals(data.cage.assignedAnimals);
+        const assignedAnimals = data.cage.assignedAnimals;
 
-        setFormData((current) => ({
-          ...current,
-          animalId: "",
-        }));
+        setAnimals(assignedAnimals);
+
+        setFormData((current) => {
+          const animalStillInCage = assignedAnimals.some(
+            (animal) => animal.animalId === current.animalId,
+          );
+
+          return {
+            ...current,
+            animalId: animalStillInCage ? current.animalId : "",
+          };
+        });
       } catch (error) {
         setError(
           error.response?.data?.message ||
@@ -123,6 +114,7 @@ function CreateObservationModal({ onClose, onCreated }) {
 
     fetchCageAnimals();
   }, [formData.cageId]);
+
   return (
     <div className="observation-modal-backdrop" onClick={onClose}>
       <div
@@ -130,10 +122,10 @@ function CreateObservationModal({ onClose, onCreated }) {
         onClick={(event) => event.stopPropagation()}
       >
         <div className="observation-modal-header">
-          <h2>Create Observation</h2>
+          <h2>Edit Observation</h2>
 
           <button type="button" onClick={onClose}>
-            ✕
+            ×
           </button>
         </div>
 
@@ -147,9 +139,7 @@ function CreateObservationModal({ onClose, onCreated }) {
               required
               disabled={loadingOptions}
             >
-              <option value="">
-                {loadingOptions ? "Loading cages..." : "Select cage"}
-              </option>
+              <option value="">Select cage</option>
 
               {cages
                 .filter((cage) => cage.status === "ACTIVE")
@@ -169,15 +159,11 @@ function CreateObservationModal({ onClose, onCreated }) {
               onChange={handleChange}
               disabled={!formData.cageId || loadingAnimals}
             >
-              <option value="">
-                {loadingAnimals
-                  ? "Loading animals..."
-                  : "Cage-level observation"}
-              </option>
+              <option value="">No specific animal (Cage-level)</option>
 
               {animals.map((animal) => (
                 <option key={animal.animalId} value={animal.animalId}>
-                  {animal.animalName || "Unnamed"} ({animal.animalCode})
+                  {animal.animalName || animal.animalCode}
                 </option>
               ))}
             </select>
@@ -191,16 +177,16 @@ function CreateObservationModal({ onClose, onCreated }) {
               onChange={handleChange}
               required
             >
-              <option value="">Select observation type</option>
-              <option value="NOT_EATING">Not Eating</option>
+              <option value="">Select type</option>
+              <option value="NOT_EATING">Not eating</option>
               <option value="VOMITING">Vomiting</option>
               <option value="DIARRHEA">Diarrhea</option>
               <option value="INJURY">Injury</option>
               <option value="LIMPING">Limping</option>
               <option value="FIGHTING">Fighting</option>
-              <option value="EYE_NOSE_DISCHARGE">Eye / Nose Discharge</option>
-              <option value="UNUSUAL_BEHAVIOR">Unusual Behavior</option>
-              <option value="CAGE_CONCERN">Cage Concern</option>
+              <option value="EYE_NOSE_DISCHARGE">Eye / nose discharge</option>
+              <option value="UNUSUAL_BEHAVIOR">Unusual behavior</option>
+              <option value="CAGE_CONCERN">Cage concern</option>
               <option value="OTHER">Other</option>
             </select>
           </label>
@@ -213,7 +199,7 @@ function CreateObservationModal({ onClose, onCreated }) {
               onChange={handleChange}
             >
               <option value="NORMAL">Normal</option>
-              <option value="NEEDS_ATTENTION">Needs Attention</option>
+              <option value="NEEDS_ATTENTION">Needs attention</option>
               <option value="URGENT">Urgent</option>
             </select>
           </label>
@@ -224,19 +210,21 @@ function CreateObservationModal({ onClose, onCreated }) {
               name="notes"
               value={formData.notes}
               onChange={handleChange}
-              rows="4"
             />
           </label>
 
-          {error && <p className="observation-form-error">{error}</p>}
+          {error && <p>{error}</p>}
 
           <div className="observation-modal-actions">
-            <button type="button" onClick={onClose} disabled={submitting}>
+            <button type="button" onClick={onClose}>
               Cancel
             </button>
 
-            <button type="submit" disabled={submitting || loadingOptions}>
-              {submitting ? "Creating..." : "Create Observation"}
+            <button
+              type="submit"
+              disabled={submitting || loadingOptions || loadingAnimals}
+            >
+              {submitting ? "Saving..." : "Save Changes"}
             </button>
           </div>
         </form>
@@ -245,4 +233,4 @@ function CreateObservationModal({ onClose, onCreated }) {
   );
 }
 
-export default CreateObservationModal;
+export default EditObservationModal;

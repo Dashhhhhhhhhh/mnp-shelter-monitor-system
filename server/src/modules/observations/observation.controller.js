@@ -25,11 +25,11 @@ async function createObservationController(req, res, next) {
 
 async function getObservationsController(req, res, next) {
   try {
-    const observations = await getObservations();
-
+    const result = await getObservations(req.query, req.user.userId);
     res.status(200).json({
       success: true,
-      observations,
+      observations: result.observations,
+      pagination: result.pagination,
     });
   } catch (error) {
     next(error);

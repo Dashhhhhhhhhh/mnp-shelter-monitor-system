@@ -83,7 +83,138 @@ async function insertObservation(
   return result.rows[0];
 }
 
-async function findObservations(db = pool) {
+async function findObservations(
+  {
+    search,
+    view,
+    status,
+    urgency,
+    observationType,
+    handledBy,
+    attention,
+    page,
+    limit,
+    sortBy,
+    sortOrder,
+  },
+  db = pool,
+) {
+  const conditions = [];
+  const values = [];
+
+  if (handledBy) {
+    values.push(handledBy);
+    conditions.push(`o.handled_by = $${values.length}`);
+
+    if (attention) {
+      values.push(["URGENT", "NEEDS_ATTENTION"]);
+
+      conditions.push(`o.urgency = ANY($${values.length}::varchar[])`);
+    }
+  }
+
+  if (view === "active") {
+    values.push(["NEW", "BEING_HANDLED", "MONITORING"]);
+
+    conditions.push(`o.status = ANY($${values.length}::varchar[])`);
+  }
+
+  if (view === "history") {
+    values.push(["RESOLVED", "ESCALATED_TO_MEDICAL"]);
+
+    conditions.push(`o.status = ANY($${values.length}::varchar[])`);
+  }
+
+  if (search) {
+    values.push(`%${search}%`);
+
+    conditions.push(`
+    (
+      a.animal_name ILIKE $${values.length}
+      OR a.animal_code ILIKE $${values.length}
+      OR c.cage_code ILIKE $${values.length}
+      OR o.notes ILIKE $${values.length}
+    )
+  `);
+  }
+
+  if (status) {
+    values.push(status);
+
+    conditions.push(`o.status = $${values.length}`);
+  }
+
+  if (urgency) {
+    values.push(urgency);
+
+    conditions.push(`o.urgency = $${values.length}`);
+  }
+
+  if (observationType) {
+    values.push(observationType);
+
+    conditions.push(`o.observation_type = $${values.length}`);
+  }
+
+  const whereClause =
+    conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "";
+
+  const countResult = await db.query(
+    `
+    SELECT COUNT(*)::int AS total
+    FROM observations o
+    JOIN cages c
+      ON c.cage_id = o.cage_id
+    LEFT JOIN animals a
+      ON a.animal_id = o.animal_id
+    ${whereClause}
+  `,
+    values,
+  );
+
+  const totalItems = countResult.rows[0].total;
+
+  const offset = (page - 1) * limit;
+
+  const dataValues = [...values, limit, offset];
+
+  const limitPosition = values.length + 1;
+  const offsetPosition = values.length + 2;
+
+  const sortColumns = {
+    createdAt: "o.created_at",
+    updatedAt: "o.updated_at",
+    observationType: "o.observation_type",
+  };
+
+  let orderByClause;
+
+  if (sortBy === "priority") {
+    orderByClause = `
+    CASE o.urgency
+      WHEN 'URGENT' THEN 1
+      WHEN 'NEEDS_ATTENTION' THEN 2
+      WHEN 'NORMAL' THEN 3
+    END ASC,
+    CASE o.status
+      WHEN 'NEW' THEN 1
+      WHEN 'BEING_HANDLED' THEN 2
+      WHEN 'MONITORING' THEN 3
+      ELSE 4
+    END ASC,
+    o.created_at DESC
+  `;
+  } else {
+    const sortColumn = sortColumns[sortBy] || "o.created_at";
+
+    const order = sortOrder === "asc" ? "ASC" : "DESC";
+
+    orderByClause = `
+    ${sortColumn} ${order},
+    o.created_at DESC
+  `;
+  }
+
   const result = await db.query(
     `
       SELECT
@@ -110,21 +241,18 @@ async function findObservations(db = pool) {
         ON c.cage_id = o.cage_id
       LEFT JOIN animals a
         ON a.animal_id = o.animal_id
-      ORDER BY
-        CASE
-          WHEN o.status IN ('NEW', 'BEING_HANDLED', 'MONITORING') THEN 1
-          ELSE 2
-        END,
-        CASE o.urgency
-          WHEN 'URGENT' THEN 1
-          WHEN 'NEEDS_ATTENTION' THEN 2
-          WHEN 'NORMAL' THEN 3
-        END,
-        o.created_at DESC
+      ${whereClause}
+        ORDER BY ${orderByClause}
+      LIMIT $${limitPosition}
+      OFFSET $${offsetPosition}
     `,
+    dataValues,
   );
 
-  return result.rows;
+  return {
+    observations: result.rows,
+    totalItems,
+  };
 }
 
 async function updateObservationDetails(

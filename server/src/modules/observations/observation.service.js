@@ -12,6 +12,7 @@ import {
   validateObservationId,
   validateCreateObservationInput,
   validateUpdateObservationInput,
+  validateObservationListQuery,
 } from "./observation.validation.js";
 
 import { findCageById } from "../cages/cage.repository.js";
@@ -147,12 +148,26 @@ async function getObservationById(observationId) {
   return mapObservation(observation);
 }
 
-async function getObservations() {
-  const observations = await findObservations();
+async function getObservations(query, currentUserId) {
+  const filters = validateObservationListQuery(query);
 
-  return observations.map(mapObservation);
+  if (filters.mine) {
+    filters.handledBy = currentUserId;
+  }
+
+  const { observations, totalItems } = await findObservations(filters);
+  const totalPages = Math.ceil(totalItems / filters.limit);
+
+  return {
+    observations: observations.map(mapObservation),
+    pagination: {
+      page: filters.page,
+      limit: filters.limit,
+      totalItems,
+      totalPages,
+    },
+  };
 }
-
 async function updateObservation(observationId, data, actorUserId, actorRole) {
   const validObservationId = validateObservationId(observationId);
 

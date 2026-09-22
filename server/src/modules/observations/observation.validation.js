@@ -88,6 +88,14 @@ function validateCreateObservationInput(data) {
       ? observationType.trim().toUpperCase()
       : null;
 
+  if (
+    !normalizedObservationType ||
+    !ALLOWED_OBSERVATION_TYPES.includes(normalizedObservationType)
+  ) {
+    const error = new Error("Invalid observation type");
+    error.statusCode = 400;
+    throw error;
+  }
   const normalizedUrgency =
     typeof urgency === "string" ? urgency.trim().toUpperCase() : null;
 
@@ -102,7 +110,7 @@ function validateCreateObservationInput(data) {
   return {
     cageId: validCageId,
     animalId: validAnimalId,
-    observationType: observationType.toUpperCase(),
+    observationType: observationType,
     urgency: normalizedUrgency,
     notes: validateNotes(notes),
     photo: validatePhoto(photo),
@@ -201,10 +209,114 @@ function validateUpdateObservationInput(data) {
   return result;
 }
 
+function validateObservationListQuery(query) {
+  const { mine, attention } = query;
+
+  const normalizedMine = mine === "true";
+
+  const normalizedAttention = attention === "true";
+
+  const view =
+    typeof query.view === "string" ? query.view.trim().toLowerCase() : "active";
+
+  const status =
+    typeof query.status === "string" ? query.status.trim().toUpperCase() : null;
+
+  const urgency =
+    typeof query.urgency === "string"
+      ? query.urgency.trim().toUpperCase()
+      : null;
+
+  const observationType =
+    typeof query.observationType === "string"
+      ? query.observationType.trim().toUpperCase()
+      : null;
+
+  const sortBy = typeof query.sortBy === "string" ? query.sortBy : "priority";
+
+  const sortOrder =
+    typeof query.sortOrder === "string"
+      ? query.sortOrder.toLowerCase()
+      : "desc";
+
+  const page = Math.max(parseInt(query.page, 10) || 1, 1);
+
+  const limit = Math.min(Math.max(parseInt(query.limit, 10) || 10, 1), 100);
+
+  const allowedViews = ["active", "history"];
+
+  if (!allowedViews.includes(view)) {
+    const error = new Error("Invalid observation view");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  const allowedStatuses = [
+    "NEW",
+    "BEING_HANDLED",
+    "MONITORING",
+    "RESOLVED",
+    "ESCALATED_TO_MEDICAL",
+  ];
+
+  if (status && !allowedStatuses.includes(status)) {
+    const error = new Error("Invalid observation status");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  if (urgency && !ALLOWED_URGENCIES.includes(urgency)) {
+    const error = new Error("Invalid observation urgency");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  if (observationType && !ALLOWED_OBSERVATION_TYPES.includes(observationType)) {
+    const error = new Error("Invalid observation type");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  const allowedSortFields = [
+    "priority",
+    "createdAt",
+    "updatedAt",
+    "observationType",
+  ];
+
+  if (!allowedSortFields.includes(sortBy)) {
+    const error = new Error("Invalid observation sort field");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  if (!["asc", "desc"].includes(sortOrder)) {
+    const error = new Error("Sort order must be asc or desc");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  const search = typeof query.search === "string" ? query.search.trim() : "";
+
+  return {
+    search,
+    view,
+    status,
+    urgency,
+    observationType,
+    page,
+    limit,
+    sortBy,
+    sortOrder,
+    mine: normalizedMine,
+  };
+}
+
 export {
   validateObservationId,
   validateCageId,
   validateAnimalId,
   validateCreateObservationInput,
   validateUpdateObservationInput,
+  validateObservationListQuery,
 };
