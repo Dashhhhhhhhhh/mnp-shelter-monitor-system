@@ -1,0 +1,374 @@
+.staff-dashboard {
+  width: 100%;
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 2rem 1rem;
+  box-sizing: border-box;
+}
+
+/* =========================
+   HEADER
+   ========================= */
+
+.dashboard-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+.dashboard-header h1 {
+  margin: 0;
+  font-size: clamp(2rem, 4vw, 3rem);
+  line-height: 1.1;
+}
+
+.dashboard-header p {
+  margin: 0.35rem 0 0;
+  color: #94a3b8;
+}
+
+.dashboard-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-shrink: 0;
+}
+
+.dashboard-header-actions button {
+  border: none;
+  border-radius: 6px;
+  padding: 0.5rem 0.75rem;
+
+  background: #4b5563;
+  color: #ffffff;
+
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.dashboard-header-actions button:hover {
+  background: #6b7280;
+}
+
+/* =========================
+   SECTIONS
+   ========================= */
+
+.dashboard-section {
+  margin-top: 2rem;
+}
+
+.dashboard-section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+
+  margin-bottom: 0.8rem;
+}
+
+.dashboard-section-header h2 {
+  margin: 0;
+  font-size: 1.25rem;
+}
+
+.dashboard-section-title {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.65rem;
+}
+
+.dashboard-section-title h2 {
+  margin: 0;
+}
+
+.dashboard-section-header > button {
+  flex-shrink: 0;
+
+  border: none;
+  border-radius: 5px;
+  padding: 0.4rem 0.65rem;
+
+  background: #4b5563;
+  color: #ffffff;
+
+  cursor: pointer;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.dashboard-section-header > button:hover {
+  background: #6b7280;
+}
+
+.dashboard-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  padding: 0.25rem 0.6rem;
+
+  border-radius: 999px;
+  background: #334155;
+  color: #ffffff;
+
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+/* =========================
+   SHARED
+   ========================= */
+
+.dashboard-label {
+  font-weight: 600;
+}
+
+.dashboard-error {
+  margin: 0.75rem 0;
+  color: #ef4444;
+}
+
+.dashboard-observation-list,
+.dashboard-care-list {
+  display: grid;
+  gap: 0.65rem;
+}
+
+/* =========================
+   TODAY'S CARE
+   ========================= */
+
+.dashboard-care-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+
+  padding: 0.8rem 1rem;
+
+  background: #ffffff;
+  color: #1f2937;
+
+  border-radius: 8px;
+}
+
+.dashboard-care-card strong {
+  font-size: 1rem;
+}
+
+.dashboard-care-card p {
+  margin: 0;
+}
+
+.dashboard-care-status {
+  display: inline-block;
+
+  padding: 0.3rem 0.6rem;
+  border-radius: 999px;
+
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.dashboard-care-status-pending {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.dashboard-care-status-overdue {
+  background: #fee2e2;
+  color: #b91c1c;
+}
+
+/* =========================
+   MY ACTIVE OBSERVATIONS
+   ========================= */
+
+.dashboard-active-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+
+  padding: 0.8rem 1rem;
+
+  background: #ffffff;
+  color: #1f2937;
+
+  border-radius: 8px;
+}
+
+.dashboard-active-main {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+
+  min-width: 0;
+}
+
+.dashboard-active-main strong {
+  overflow-wrap: anywhere;
+}
+
+.dashboard-active-details {
+  color: #64748b;
+  font-size: 0.85rem;
+  overflow-wrap: anywhere;
+}
+
+.dashboard-active-status {
+  flex-shrink: 0;
+
+  padding: 0.3rem 0.6rem;
+
+  border-radius: 999px;
+  background: #ede9fe;
+  color: #6d28d9;
+
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+/* =========================
+   NEEDS ATTENTION
+   ========================= */
+
+.dashboard-alert-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+
+  padding: 0.8rem 1rem;
+
+  background: #ffffff;
+  color: #1f2937;
+
+  border-radius: 8px;
+}
+
+.dashboard-alert-main {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+
+  min-width: 0;
+}
+
+.dashboard-alert-main strong {
+  overflow-wrap: anywhere;
+}
+
+.dashboard-alert-details {
+  color: #64748b;
+  font-size: 0.85rem;
+  overflow-wrap: anywhere;
+}
+
+.dashboard-alert-urgency {
+  flex-shrink: 0;
+
+  padding: 0.3rem 0.6rem;
+
+  border-radius: 999px;
+
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.dashboard-alert-urgent {
+  background: #fee2e2;
+  color: #b91c1c;
+}
+
+.dashboard-alert-attention {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+/* =========================
+   TABLET / MOBILE
+   ========================= */
+
+@media (max-width: 700px) {
+  .staff-dashboard {
+    padding: 1rem;
+  }
+
+  .dashboard-header {
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  .dashboard-header-actions {
+    width: 100%;
+  }
+
+  .dashboard-header-actions button {
+    flex: 1;
+  }
+
+  .dashboard-section {
+    margin-top: 1.5rem;
+  }
+
+  .dashboard-section-header {
+    align-items: flex-start;
+  }
+
+  .dashboard-section-title {
+    gap: 0.5rem;
+  }
+
+  .dashboard-care-card,
+  .dashboard-active-row,
+  .dashboard-alert-row {
+    align-items: flex-start;
+  }
+
+  .dashboard-care-card {
+    flex-direction: column;
+  }
+
+  .dashboard-active-status,
+  .dashboard-alert-urgency {
+    font-size: 0.7rem;
+  }
+
+  .dashboard-active-details,
+  .dashboard-alert-details {
+    font-size: 0.8rem;
+  }
+}
+
+/* =========================
+   SMALL PHONES
+   ========================= */
+
+@media (max-width: 480px) {
+  .dashboard-header h1 {
+    font-size: 2rem;
+  }
+
+  .dashboard-section-header h2 {
+    font-size: 1.1rem;
+  }
+
+  .dashboard-active-row,
+  .dashboard-alert-row {
+    flex-direction: column;
+  }
+
+  .dashboard-header-actions {
+    flex-direction: column;
+  }
+
+  .dashboard-header-actions button {
+    width: 100%;
+  }
+}
