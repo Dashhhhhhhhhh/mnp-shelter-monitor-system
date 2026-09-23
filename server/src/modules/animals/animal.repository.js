@@ -107,9 +107,16 @@ async function findAnimals({
   sortOrder,
   page,
   limit,
+  needsCare,
 }) {
   const conditions = ["a.is_archived = FALSE"];
   const values = [];
+
+  if (needsCare) {
+    values.push(["SICK", "INJURED", "UNDER_OBSERVATION"]);
+
+    conditions.push(`a.health_status = ANY($${values.length}::varchar[])`);
+  }
 
   if (species) {
     values.push(species);

@@ -250,6 +250,8 @@ function validateCreateAnimalInput(animalData) {
 }
 
 function validateAnimalListQuery(query) {
+  const needsCare = query.needsCare === "true";
+
   const search = typeof query.search === "string" ? query.search.trim() : "";
 
   const species =
@@ -398,6 +400,7 @@ function validateAnimalListQuery(query) {
     sortOrder,
     page,
     limit,
+    needsCare,
   };
 }
 
