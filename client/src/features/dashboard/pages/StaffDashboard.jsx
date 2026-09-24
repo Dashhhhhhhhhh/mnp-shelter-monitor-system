@@ -187,11 +187,9 @@ function StaffDashboard() {
         <div>
           <h1>Staff Dashboard</h1>
           <p>
-            <p>
-              Welcome back, {user?.firstName}
-              {user?.middleInitial ? `${user.middleInitial}. ` : ""}
-              {user?.lastName}.
-            </p>
+            Welcome back, {user?.firstName}
+            {user?.middleInitial ? `${user.middleInitial}. ` : ""}
+            {user?.lastName}.
           </p>
         </div>
 
