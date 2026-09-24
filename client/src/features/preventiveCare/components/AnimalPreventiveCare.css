@@ -1,0 +1,89 @@
+.animal-preventive-care {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.preventive-care-header {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 0.75rem;
+}
+
+.preventive-care-add-button {
+  padding: 0.45rem 0.75rem;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font: inherit;
+}
+
+.animal-preventive-care-list {
+  display: grid;
+  gap: 0.65rem;
+}
+
+.preventive-care-record {
+  padding: 0.75rem;
+  border: 1px solid #d7dde5;
+  border-radius: 8px;
+  background: #ffffff;
+}
+
+.preventive-care-record-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.preventive-care-record-title {
+  font-weight: 700;
+}
+
+.preventive-care-status {
+  padding: 0.2rem 0.5rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.preventive-care-status.upcoming {
+  background: #dbeafe;
+  color: #1d4ed8;
+}
+
+.preventive-care-status.due {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.preventive-care-status.overdue {
+  background: #fee2e2;
+  color: #b91c1c;
+}
+
+.preventive-care-status.no-due-date {
+  background: #e5e7eb;
+  color: #374151;
+}
+
+.preventive-care-record-details {
+  display: grid;
+  gap: 0.25rem;
+}
+
+.preventive-care-record-details p {
+  margin: 0;
+  font-size: 0.9rem;
+}
+
+.preventive-care-view-all {
+  align-self: center;
+  padding: 0.4rem 0.75rem;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font: inherit;
+}

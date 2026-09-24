@@ -11,6 +11,8 @@ import { useToast } from "../../../components/feedback/ToastContext";
 
 import AnimalMedicalHistory from "../../medical/components/AnimalMedicalHistory";
 
+import AnimalPreventiveCare from "../../preventiveCare/components/AnimalPreventiveCare";
+
 function AnimalDetailsDrawer({
   animalId,
   onClose,
@@ -305,6 +307,12 @@ function AnimalDetailsDrawer({
                 <h3>Medical History</h3>
 
                 <AnimalMedicalHistory animalId={animal.animalId} />
+              </section>
+
+              <section className="animal-details-section">
+                <h3>Preventive Care</h3>
+
+                <AnimalPreventiveCare animalId={animal.animalId} />
               </section>
 
               <section className="animal-details-section">
