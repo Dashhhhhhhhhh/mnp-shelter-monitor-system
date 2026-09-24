@@ -1,5 +1,8 @@
 import { useEffect, useState } from "react";
+
 import { getAnimals } from "../api/animalApi";
+
+import { useSearchParams } from "react-router-dom";
 
 import AnimalDetailsDrawer from "../components/AnimalDetailsDrawer";
 
@@ -37,6 +40,12 @@ function AnimalsPage() {
 
   const [refreshKey, setRefreshKey] = useState(0);
 
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  const animalIdFromUrl = searchParams.get("animalId");
+
+  const needsCare = searchParams.get("needsCare") === "true";
+
   function handleResetFilters() {
     setSearch("");
     setSpecies("");
@@ -63,6 +72,12 @@ function AnimalsPage() {
   }, [search]);
 
   useEffect(() => {
+    if (animalIdFromUrl) {
+      setSelectedAnimalId(animalIdFromUrl);
+    }
+  }, [animalIdFromUrl]);
+
+  useEffect(() => {
     async function fetchAnimals() {
       try {
         const data = await getAnimals({
@@ -77,6 +92,7 @@ function AnimalsPage() {
           sortOrder,
           page,
           limit,
+          needsCare,
         });
         setAnimals(data.animals);
         setPagination(data.pagination);
@@ -118,6 +134,15 @@ function AnimalsPage() {
           : animal,
       ),
     );
+  }
+
+  function handleCloseAnimalDrawer() {
+    setSelectedAnimalId(null);
+
+    const nextParams = new URLSearchParams(searchParams);
+    nextParams.delete("animalId");
+
+    setSearchParams(nextParams);
   }
 
   function handleAnimalCreated(createdAnimal) {
@@ -312,7 +337,7 @@ function AnimalsPage() {
       </div>
       <AnimalDetailsDrawer
         animalId={selectedAnimalId}
-        onClose={() => setSelectedAnimalId(null)}
+        onClose={handleCloseAnimalDrawer}
         onAnimalUpdated={handleAnimalUpdated}
         onAnimalArchived={() => {
           setSelectedAnimalId(null);

@@ -372,3 +372,62 @@
     width: 100%;
   }
 }
+
+.dashboard-animal-list {
+  display: grid;
+  gap: 0.65rem;
+}
+
+.dashboard-animal-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+
+  width: 100%;
+  padding: 0.8rem 1rem;
+
+  border: none;
+  border-radius: 8px;
+
+  background: #ffffff;
+  color: #1f2937;
+
+  text-align: left;
+}
+
+.dashboard-animal-main {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  min-width: 0;
+}
+
+.dashboard-animal-details {
+  color: #64748b;
+  font-size: 0.85rem;
+}
+
+.dashboard-animal-health {
+  flex-shrink: 0;
+  padding: 0.3rem 0.6rem;
+  border-radius: 999px;
+
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.dashboard-animal-injured {
+  background: #fee2e2;
+  color: #b91c1c;
+}
+
+.dashboard-animal-sick {
+  background: #ffedd5;
+  color: #c2410c;
+}
+
+.dashboard-animal-observation {
+  background: #fef3c7;
+  color: #92400e;
+}

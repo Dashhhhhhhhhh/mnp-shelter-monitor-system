@@ -8,6 +8,8 @@ import { getObservations } from "../../observations/api/observationApi";
 
 import { getCareRecordsByDate } from "../../care/api/careApi";
 
+import { getAnimals } from "../../animals/api/animalApi";
+
 import useAuth from "../../auth/hooks/useAuth";
 
 import RegisterStaffModal from "../../users/components/RegisterStaffModal";
@@ -32,6 +34,20 @@ function StaffDashboard() {
   const [attentionObservations, setAttentionObservations] = useState([]);
   const [attentionLoading, setAttentionLoading] = useState(true);
   const [attentionError, setAttentionError] = useState("");
+
+  const [animalsNeedingCare, setAnimalsNeedingCare] = useState([]);
+  const [animalsCareCount, setAnimalsCareCount] = useState(0);
+  const [animalsCareLoading, setAnimalsCareLoading] = useState(true);
+  const [animalsCareError, setAnimalsCareError] = useState("");
+
+  const [showAllAnimalsNeedingCare, setShowAllAnimalsNeedingCare] =
+    useState(false);
+
+  const [showAllAttention, setShowAllAttention] = useState(false);
+
+  const [showAllMyObservations, setShowAllMyObservations] = useState(false);
+
+  const [showAllTodayCare, setShowAllTodayCare] = useState(false);
 
   const pendingCareRecords = todayCareRecords.filter(
     (record) => record.status === "PENDING" || record.isOverdue,
@@ -123,6 +139,48 @@ function StaffDashboard() {
     fetchAttentionObservations();
   }, []);
 
+  useEffect(() => {
+    async function fetchAnimalsNeedingCare() {
+      try {
+        setAnimalsCareError("");
+
+        const data = await getAnimals({
+          status: "ACTIVE",
+          needsCare: true,
+          limit: 100,
+        });
+
+        setAnimalsNeedingCare(data.animals);
+        setAnimalsCareCount(data.pagination.totalItems);
+      } catch (error) {
+        setAnimalsCareError(
+          error.response?.data?.message ||
+            "Unable to load animals needing care.",
+        );
+      } finally {
+        setAnimalsCareLoading(false);
+      }
+    }
+
+    fetchAnimalsNeedingCare();
+  }, []);
+
+  const displayedAnimalsNeedingCare = showAllAnimalsNeedingCare
+    ? animalsNeedingCare
+    : animalsNeedingCare.slice(0, 5);
+
+  const displayedAttentionObservations = showAllAttention
+    ? attentionObservations
+    : attentionObservations.slice(0, 5);
+
+  const displayedMyObservations = showAllMyObservations
+    ? myObservations
+    : myObservations.slice(0, 5);
+
+  const displayedPendingCareRecords = showAllTodayCare
+    ? pendingCareRecords
+    : pendingCareRecords.slice(0, 5);
+
   return (
     <main className="staff-dashboard">
       <header className="dashboard-header">
@@ -149,7 +207,6 @@ function StaffDashboard() {
           </button>
         </div>
       </header>
-
       <section className="dashboard-section">
         <div className="dashboard-section-header">
           <div className="dashboard-section-title">
@@ -171,7 +228,7 @@ function StaffDashboard() {
 
         {!careLoading && !careError && pendingCareRecords.length > 0 && (
           <div className="dashboard-care-list">
-            {pendingCareRecords.map((record) => (
+            {displayedPendingCareRecords.map((record) => (
               <button
                 key={record.careRecordId}
                 type="button"
@@ -191,16 +248,25 @@ function StaffDashboard() {
                     {record.isOverdue ? "OVERDUE" : record.status}
                   </span>
                 </p>
+                {pendingCareRecords.length > 5 && (
+                  <button
+                    type="button"
+                    className="dashboard-view-all"
+                    onClick={() => setShowAllTodayCare((current) => !current)}
+                  >
+                    {showAllTodayCare
+                      ? "Show less"
+                      : `View all ${pendingCareRecords.length}`}
+                  </button>
+                )}
               </button>
             ))}
           </div>
         )}
       </section>
-
       {isRegisterModalOpen && (
         <RegisterStaffModal onClose={() => setIsRegisterModalOpen(false)} />
       )}
-
       <section className="dashboard-section">
         <div className="dashboard-section-header">
           <h2>My Active Observations</h2>
@@ -222,7 +288,7 @@ function StaffDashboard() {
           !observationError &&
           myObservations.length > 0 && (
             <div className="dashboard-observation-list">
-              {myObservations.map((observation) => (
+              {displayedMyObservations.map((observation) => (
                 <button
                   key={observation.observationId}
                   type="button"
@@ -243,12 +309,25 @@ function StaffDashboard() {
                   <span className="dashboard-active-status">
                     {observation.status.replaceAll("_", " ")}
                   </span>
+
+                  {myObservations.length > 5 && (
+                    <button
+                      type="button"
+                      className="dashboard-view-all"
+                      onClick={() =>
+                        setShowAllMyObservations((current) => !current)
+                      }
+                    >
+                      {showAllMyObservations
+                        ? "Show less"
+                        : `View all ${myObservations.length}`}
+                    </button>
+                  )}
                 </button>
               ))}
             </div>
           )}
       </section>
-
       <section className="dashboard-section">
         <div className="dashboard-section-header">
           <div className="dashboard-section-title">
@@ -273,42 +352,130 @@ function StaffDashboard() {
         {!attentionLoading &&
           !attentionError &&
           attentionObservations.length > 0 && (
-            <div className="dashboard-observation-list">
-              {attentionObservations.map((observation) => (
+            <>
+              <div className="dashboard-observation-list">
+                {displayedAttentionObservations.map((observation) => (
+                  <button
+                    key={observation.observationId}
+                    type="button"
+                    className="dashboard-alert-row dashboard-clickable-row"
+                    onClick={() =>
+                      navigate(
+                        `/staff/observations?observationId=${observation.observationId}`,
+                      )
+                    }
+                  >
+                    <div className="dashboard-alert-main">
+                      <strong>
+                        {observation.animalName || observation.cageCode}
+                      </strong>
+
+                      <span className="dashboard-alert-details">
+                        {observation.cageCode} ·{" "}
+                        {observation.observationType.replaceAll("_", " ")} ·{" "}
+                        {observation.status.replaceAll("_", " ")}
+                      </span>
+                    </div>
+
+                    <span
+                      className={`dashboard-alert-urgency ${
+                        observation.urgency === "URGENT"
+                          ? "dashboard-alert-urgent"
+                          : "dashboard-alert-attention"
+                      }`}
+                    >
+                      {observation.urgency.replaceAll("_", " ")}
+                    </span>
+                  </button>
+                ))}
+              </div>
+
+              {attentionObservations.length > 5 && (
                 <button
-                  key={observation.observationId}
                   type="button"
-                  className="dashboard-alert-row dashboard-clickable-row"
+                  className="dashboard-view-all"
+                  onClick={() => setShowAllAttention((current) => !current)}
+                >
+                  {showAllAttention
+                    ? "Show less"
+                    : `View all ${attentionObservations.length}`}
+                </button>
+              )}
+            </>
+          )}
+      </section>
+      <section className="dashboard-section">
+        <div className="dashboard-section-header">
+          <div className="dashboard-section-title">
+            <h2>Animals Needing Care</h2>
+
+            <span className="dashboard-count">{animalsCareCount}</span>
+          </div>
+        </div>
+
+        {animalsCareLoading && <p>Loading animals needing care...</p>}
+
+        {animalsCareError && (
+          <p className="dashboard-error">{animalsCareError}</p>
+        )}
+
+        {!animalsCareLoading &&
+          !animalsCareError &&
+          animalsNeedingCare.length === 0 && (
+            <p>No active animals currently need care.</p>
+          )}
+
+        {!animalsCareLoading &&
+          !animalsCareError &&
+          animalsNeedingCare.length > 0 && (
+            <>
+              <div className="dashboard-animal-list">
+                {displayedAnimalsNeedingCare.map((animal) => (
+                  <button
+                    key={animal.animalId}
+                    type="button"
+                    className="dashboard-animal-row dashboard-clickable-row"
+                    onClick={() =>
+                      navigate(`/staff/animals?animalId=${animal.animalId}`)
+                    }
+                  >
+                    <div className="dashboard-animal-main">
+                      <strong>{animal.animalName || animal.animalCode}</strong>
+
+                      <span className="dashboard-animal-details">
+                        {animal.animalCode} · {animal.species}
+                      </span>
+                    </div>
+
+                    <span
+                      className={`dashboard-animal-health ${
+                        animal.healthStatus === "INJURED"
+                          ? "dashboard-animal-injured"
+                          : animal.healthStatus === "SICK"
+                            ? "dashboard-animal-sick"
+                            : "dashboard-animal-observation"
+                      }`}
+                    >
+                      {animal.healthStatus.replaceAll("_", " ")}
+                    </span>
+                  </button>
+                ))}
+              </div>
+
+              {animalsCareCount > 5 && (
+                <button
+                  type="button"
+                  className="dashboard-view-all"
                   onClick={() =>
-                    navigate(
-                      `/staff/observations?observationId=${observation.observationId}`,
-                    )
+                    setShowAllAnimalsNeedingCare((current) => !current)
                   }
                 >
-                  <div className="dashboard-alert-main">
-                    <strong>
-                      {observation.animalName || observation.cageCode}
-                    </strong>
-
-                    <span className="dashboard-alert-details">
-                      {observation.cageCode} ·{" "}
-                      {observation.observationType.replaceAll("_", " ")} ·{" "}
-                      {observation.status.replaceAll("_", " ")}
-                    </span>
-                  </div>
-
-                  <span
-                    className={`dashboard-alert-urgency ${
-                      observation.urgency === "URGENT"
-                        ? "dashboard-alert-urgent"
-                        : "dashboard-alert-attention"
-                    }`}
-                  >
-                    {observation.urgency.replaceAll("_", " ")}
-                  </span>
+                  {showAllAnimalsNeedingCare
+                    ? "Show less"
+                    : `View all ${animalsCareCount}`}
                 </button>
-              ))}
-            </div>
+              )}
+            </>
           )}
       </section>
     </main>
